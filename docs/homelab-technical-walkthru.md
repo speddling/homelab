@@ -52,7 +52,7 @@ Since you have a single powerful node, I highly recommend installing **K3s**. It
 
 **To install K3s on your new server:**
 ```bash
-curl -sfL [https://get.k3s.io](https://get.k3s.io) | sh -
+curl -sfL https://get.k3s.io | sh -
 # Check if it's running
 sudo kubectl get nodes
 ```
