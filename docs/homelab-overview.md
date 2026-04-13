@@ -57,4 +57,4 @@
 
 - ****Desktop client**** — Strawberry Music Player (Linux), explore MacOS build
 
-- ****Mobile client**** — Symfonium on Razr 2023, potentially also on retired LG V40 over WiFi
+- ****Mobile client**** — Symfonium on retired LG V40  and LG V60 over WiFi
