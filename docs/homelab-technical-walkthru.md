@@ -36,7 +36,7 @@ Once the install finishes and the system reboots, you can unplug the monitor and
 
 ### Prepare the Drives for K8s
 Update the system and format that 2TB drive for storage:
-```bash
+````
 sudo apt update && sudo apt upgrade -y
 # Find your 2TB drive (likely /dev/sdb)
 lsblk
@@ -44,8 +44,7 @@ lsblk
 sudo mkfs.ext4 /dev/sdb
 sudo mkdir /mnt/storage
 sudo mount /dev/sdb /mnt/storage
-
----
+````
 
 ## 5. Kubernetes Foundation
 Since you have a single powerful node, I highly recommend installing **K3s**. It’s lightweight but fully compliant.
