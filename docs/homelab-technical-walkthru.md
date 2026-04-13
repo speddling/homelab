@@ -55,7 +55,7 @@ Since you have a single powerful node, I highly recommend installing **K3s**. It
 curl -sfL [https://get.k3s.io](https://get.k3s.io) | sh -
 # Check if it's running
 sudo kubectl get nodes
-
+```
 ## One Final "Ryzen" Tip
 Early Ryzen chips (like the 1600x) occasionally had a "C-state" bug on Linux that caused idle freezes. If your tower randomly crashes when you aren't using it:
 1.  Edit your GRUB config: `sudo nano /etc/default/grub`
