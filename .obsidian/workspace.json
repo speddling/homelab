@@ -186,6 +186,8 @@
   },
   "active": "165dadc935b0cab3",
   "lastOpenFiles": [
+    "docs/Pipeline considerations.md",
+    "docs/homelab-overview.md",
     "docs/homelab-technical-walkthru.md",
     "README.md",
     "runbooks/misc-tools",
@@ -198,7 +200,6 @@
     "runbooks/kubernetes",
     "runbooks/aws",
     "runbooks",
-    "docs/homelab-overview.md",
     "nodes/amd-tower/hardware.md",
     "nodes/macbook/hardware.md",
     "Untitled.md"
