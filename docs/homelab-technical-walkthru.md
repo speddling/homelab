@@ -60,3 +60,36 @@ Early Ryzen chips (like the 1600x) occasionally had a "C-state" bug on Linux tha
 1.  Edit your GRUB config: `sudo nano /etc/default/grub`
 2.  Add `processor.max_cstate=1` to the `GRUB_CMDLINE_LINUX_DEFAULT` line.
 3.  Run `sudo update-grub` and reboot.
+
+
+
+
+---------------------
+
+
+The ASRock AB350 Pro4 is a classic workhorse for this kind of project, especially with a Ryzen 5 and 32GB of RAM. Since you are building a headless Ubuntu lab with Kubernetes, here are the hardware-specific "gotchas" and strategies for your storage layout based on that board's architecture: 
+
+1. Storage Slot "Rules"
+
+The AB350 Pro4 has a specific way it handles bandwidth that will dictate where you plug in your drives:
+
+- **M2_1 (Ultra M.2):** This slot is directly connected to your Ryzen CPU. **Use this for your M.2 boot volume.** Note that using this slot **disables** the `PCIE4` slot (the second full-length PCIe slot).
+- **M2_2:** This slot **only supports SATA M.2 drives**, not NVMe. If you ever buy an M.2 for this slot, it shares bandwidth with the `SATA3_3` port; using one disables the other.
+- **SATA Ports:** You have **6 SATA3 ports**. Four are from the AMD chipset (SATA3_1~4) and two are from an ASMedia chip (SATA3_A1~A2). For the best performance with your 2TB and 512GB SSDs, use the **chipset ports (SATA3_1 or SATA3_2)** first. 
+
+2. Headless Ryzen 5 Considerations
+
+Since your Ryzen 5 likely does not have integrated graphics (IGPU), the motherboard's onboard HDMI/VGA ports will be **inactive**. 
+
+- **Initial Setup:** You will need a temporary discrete GPU just to get the OS installed and SSH enabled.
+- **Headless Boot:** Some versions of this board may refuse to boot without a GPU detected. If you run into "no-boot" issues once you pull the card for headless operation, you may need a **cheap "dummy" plug** or to check the BIOS for a "Halt on Error" setting to ignore the missing VGA. 
+
+3. Recommended Storage Manifest Strategy
+
+With your 512GB Crucial SSD now in the mix, your Kubernetes `PersistentVolume` (PV) strategy should look like this:
+
+| Drive             | Purpose                  | K8s Volume Type                  |
+| ----------------- | ------------------------ | -------------------------------- |
+| **M.2 NVMe**      | OS / K8s System          | Local Boot                       |
+| **512GB Crucial** | Navidrome DB / Art Cache | `ReadWriteOnce` PV (Fast I/O)    |
+| **2TB SSD**       | 1.3TB Music Library      | `ReadOnlyMany` PV (Bulk Storage) |
