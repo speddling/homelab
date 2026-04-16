@@ -197,12 +197,35 @@ One working loop beats a perfect architecture you haven't validated yet.
 ---
 ## Upgrade Thoughts
 
-|**Component**|**Choice**|**Reason for K8s**|
-|---|---|---|
-|**CPU**|**Ryzen 9 5900X**|Highest core count that the VRMs can safely handle.|
-|**RAM**|**64GB DDR4-3200**|Critical for running multiple nodes and namespaces.|
-|**Cooling**|**Down-draft Air Cooler**|A cooler like the _Noctua NH-L12S_ or _Be Quiet! Shadow Rock LP_ blows air onto the VRMs, which is vital for this motherboard.|
-|**Storage**|**NVMe Gen3 (Slot 1)**|Use the Ultra M.2 slot for your `etcd` store and boot drive to keep latency low.|
+| **Component** | **Choice**                | **Reason for K8s**                                                                                                             |
+| ------------- | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| **CPU**       | **Ryzen 9 5900X**         | Highest core count that the VRMs can safely handle.                                                                            |
+| **RAM**       | **64GB DDR4-3200**        | Critical for running multiple nodes and namespaces.                                                                            |
+| **Cooling**   | **Down-draft Air Cooler** | A cooler like the _Noctua NH-L12S_ or _Be Quiet! Shadow Rock LP_ blows air onto the VRMs, which is vital for this motherboard. |
+| **Storage**   | **NVMe Gen3 (Slot 1)**    | Use the Ultra M.2 slot for your `etcd` store and boot drive to keep latency low.                                               |
+
+
+---
+
+### 1. The Storage Architecture (K3s + Navidrome)
+
+Since you have a mix of NVMe, SATA SSDs, and a mechanical HDD, here is the most efficient way to map them in your Kubernetes lab:
+
+- **Boot Drive / Control Plane (Samsung 512GB NVMe):** * Install your OS (likely Ubuntu Server or Debian) here.
+    
+    - K3s stores its `etcd` database in `/var/lib/rancher/k3s`. The low latency of your NVMe is crucial for preventing "database leader election" timeouts as your cluster grows.
+        
+- **Media Library SSD (Crucial 1TB SSD):** * Mount this specifically for your **Navidrome** music library.
+    
+    - **Pro Tip:** Format this with **XFS** or **Ext4**. If you use K3s with **Local Path Provisioner**, you can point a Persistent Volume (PV) directly to this SSD to keep Navidrome’s scanning fast.
+        
+- **Application Data SSD (Crucial 512GB & 256GB SSD):** * Use this for other lightweight containers (AdGuard Home, Home Assistant, etc.). It keeps your OS drive clean and your media drive dedicated to throughput.
+    
+- **Backup & Cold Storage (2TB HDD):** * Mount this for long-term backups or large file storage that doesn't require speed. You can also use this as a "Bulk Storage" class in K3s for non-essential pods.
+    
+
+---
+
 
 
 ## Network Stack Reference
