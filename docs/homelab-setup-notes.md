@@ -195,6 +195,15 @@ Get these working in order before building anything else:
 One working loop beats a perfect architecture you haven't validated yet.
 
 ---
+## Upgrade Thoughts
+
+|**Component**|**Choice**|**Reason for K8s**|
+|---|---|---|
+|**CPU**|**Ryzen 9 5900X**|Highest core count that the VRMs can safely handle.|
+|**RAM**|**64GB DDR4-3200**|Critical for running multiple nodes and namespaces.|
+|**Cooling**|**Down-draft Air Cooler**|A cooler like the _Noctua NH-L12S_ or _Be Quiet! Shadow Rock LP_ blows air onto the VRMs, which is vital for this motherboard.|
+|**Storage**|**NVMe Gen3 (Slot 1)**|Use the Ultra M.2 slot for your `etcd` store and boot drive to keep latency low.|
+
 
 ## Network Stack Reference
 
