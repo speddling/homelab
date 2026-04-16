@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "docs/homelab-overview.md",
+                "file": "docs/Pipeline considerations.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "homelab-overview"
+              "title": "Pipeline considerations"
             }
           }
         ]
@@ -186,10 +186,10 @@
   },
   "active": "165dadc935b0cab3",
   "lastOpenFiles": [
-    "docs/Pipeline considerations.md",
     "docs/homelab-overview.md",
-    "docs/homelab-technical-walkthru.md",
     "README.md",
+    "docs/homelab-technical-walkthru.md",
+    "docs/Pipeline considerations.md",
     "runbooks/misc-tools",
     "runbooks/ai",
     "runbooks/macos",

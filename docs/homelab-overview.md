@@ -36,7 +36,6 @@
   
 
 - Ubuntu Server 24.04 LTS for worker node
-
 - OrbStack on MacBook for local container/VM management
 
   
@@ -46,12 +45,9 @@
   
 
 - Install Ubuntu Server 24.04 on AMD tower
-
 - Assign static DHCP reservation in Omada
-
 - Configure SSH access from MacBook
-
-- Mount 2TB drive as data volume
+- Mount drives
 
 - Install k3s to bootstrap cluster
 
@@ -63,8 +59,8 @@
 
 - ****Navidrome**** — Subsonic API compatible music server, lightweight, excellent Kubernetes support
 
-- ****Source library**** — ~1.3TB mix of FLAC and 320 VBR MP3s
+- ****Source library**** — ~1 TB mix of FLAC and 320 VBR MP3s
 
-- ****Desktop client**** — Strawberry Music Player (Linux), explore MacOS build
+- ****Desktop client**** — Strawberry Music Player (Linux), Psysonic (MacOS)
 
 - ****Mobile client**** — Symfonium on retired LG V40  and LG V60 over WiFi
