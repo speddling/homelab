@@ -6,8 +6,38 @@
 - Noctua cooler 
 
 - ****Storage**** 
-- 512gb NVMe - boot
-- 512gb SSD 
-- 256gb SSD  
-- 2tb HDD
+- ~~512gb NVMe - boot~~
+- ~~512gb SSD~~ 
+- ~~256gb SSD~~  
+- ~~2tb HDD~~
 - 1tb SSD - media library
+
+```
+df -h
+
+Filesystem                         Size  Used Avail Use% Mounted on
+
+tmpfs                              1.6G  1.2M  1.6G   1% /run
+
+efivarfs                           128K   14K  110K  12% /sys/firmware/efi/efivars
+
+/dev/mapper/ubuntu--vg-ubuntu--lv   98G  6.8G   87G   8% /
+
+tmpfs                              7.6G     0  7.6G   0% /dev/shm
+
+tmpfs                              5.0M     0  5.0M   0% /run/lock
+
+/dev/nvme0n1p2                     2.0G  200M  1.6G  11% /boot
+
+/dev/nvme0n1p1                     1.1G  6.2M  1.1G   1% /boot/efi
+
+tmpfs                              1.6G   12K  1.6G   1% /run/user/1000
+
+/dev/sda                           458G   28K  435G   1% /mnt/k8s-worker
+
+/dev/sdb                           234G   28K  222G   1% /mnt/k8s-etcd
+
+/dev/sdc                           1.8T   28K  1.7T   1% /mnt/lab-backups
+```
+
+

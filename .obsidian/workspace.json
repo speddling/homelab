@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "docs/Pipeline considerations.md",
+                "file": "nodes/amd-tower/hardware.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "Pipeline considerations"
+              "title": "hardware"
             }
           }
         ]
@@ -186,10 +186,10 @@
   },
   "active": "165dadc935b0cab3",
   "lastOpenFiles": [
+    "docs/Pipeline considerations.md",
     "docs/homelab-setup-notes.md",
     "docs/homelab-overview.md",
     "docs/DEPRECIATED --- homelab-technical-walkthru.md",
-    "docs/Pipeline considerations.md",
     "nodes/amd-tower/hardware.md",
     "README.md",
     "runbooks/misc-tools",
