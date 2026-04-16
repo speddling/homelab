@@ -21,7 +21,7 @@ tmpfs                              1.6G  1.2M  1.6G   1% /run
 
 efivarfs                           128K   14K  110K  12% /sys/firmware/efi/efivars
 
-/dev/mapper/ubuntu--vg-ubuntu--lv   98G  6.8G   87G   8% /
+/dev/mapper/ubuntu--vg-ubuntu--lv  148G  6.8G  134G   5% /
 
 tmpfs                              7.6G     0  7.6G   0% /dev/shm
 
