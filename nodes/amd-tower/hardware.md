@@ -1,8 +1,13 @@
 
-- Ryzen 5 1600x, Asrock AB350 Pro4, 32GB RAM
+- AMD A10-9700 Radeon R7 10 Compute Cores 4C+6G 3.50 GHz 
+- Asrock AB350 Pro4
+- 16GB RAM
 - Fractal Design Define R4 (Monolith)
-- Noctua cooler
-- 512gb boot volume M.2
+- Noctua cooler 
+
+- ****Storage**** 
+- 512gb NVMe - boot
+- 512gb SSD 
+- 256gb SSD  
 - 2tb HDD
-- 2tb SSD media library
-- Planned role: Kubernetes worker node
+- 1tb SSD - media library
