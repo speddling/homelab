@@ -12,7 +12,7 @@
 - ~~2tb HDD~~
 - 1tb SSD - media library
 
-```
+```bash
 df -h
 
 Filesystem                         Size  Used Avail Use% Mounted on
