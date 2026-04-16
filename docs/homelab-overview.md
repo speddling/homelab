@@ -3,12 +3,21 @@
 
   
 
-- ****Control Plane / Workstation**** — MacBook Air M4 (16GB) running macOS
+- ****Control Plane / Workstation**** 
 
-- ****Worker Node**** — AMD A10-9700 Radeon R7 10 Compute Cores 4C+6G 3.50 GHz 
+- MacBook Air M4 (16GB) running macOS
+
+- ****Worker Node****
+
+- AMD A10-9700 Radeon R7 10 Compute Cores 4C+6G 3.50 GHz 
 - Asrock AB350 Pro4, 16GB RAM, Fractal Design Define R4, Noctua cooler — currently on the floor with side panel off, ready for OS install
 
-- ****Storage**** — 2TB spinner 
+- ****Storage**** 
+- 512gb NVMe - boot
+- 512gb SSD 
+- 256gb SSD  
+- 2tb HDD
+- 1tb SSD - media library
 
   
 
