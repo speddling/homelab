@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "docs/DEPRECIATED --- homelab-technical-walkthru.md",
+                "file": "docs/homelab-setup-notes.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "DEPRECIATED --- homelab-technical-walkthru"
+              "title": "homelab-setup-notes"
             }
           }
         ]
@@ -186,10 +186,10 @@
   },
   "active": "165dadc935b0cab3",
   "lastOpenFiles": [
-    "docs/homelab-setup-notes.md",
-    "docs/Pipeline considerations.md",
     "docs/homelab-overview.md",
     "docs/DEPRECIATED --- homelab-technical-walkthru.md",
+    "docs/homelab-setup-notes.md",
+    "docs/Pipeline considerations.md",
     "nodes/amd-tower/hardware.md",
     "README.md",
     "runbooks/misc-tools",
