@@ -184,8 +184,9 @@
       "obsidian-git:Open Git source control": false
     }
   },
-  "active": "165dadc935b0cab3",
+  "active": "bffb361906a7587a",
   "lastOpenFiles": [
+    "terraform/bootstrap/main.tf.sb-5559f029-BRi9d5",
     "nodes/amd-tower/hardware.md",
     "terraform/modules/navidrome",
     "terraform/modules/local-disk",
