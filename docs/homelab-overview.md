@@ -5,9 +5,10 @@
 
 - ****Control Plane / Workstation**** — MacBook Air M4 (16GB) running macOS
 
-- ****Worker Node**** — AMD Ryzen 5 1600x, Asrock AB350 Pro4, 32GB RAM, Fractal Design Define R4, Noctua cooler — currently on the floor with side panel off, ready for OS install
+- ****Worker Node**** — AMD A10-9700 Radeon R7 10 Compute Cores 4C+6G 3.50 GHz 
+- Asrock AB350 Pro4, 16GB RAM, Fractal Design Define R4, Noctua cooler — currently on the floor with side panel off, ready for OS install
 
-- ****Storage**** — 2TB spinner (Tunes drive) sitting on network shelf, ready to mount in AMD tower
+- ****Storage**** — 2TB spinner 
 
   
 
