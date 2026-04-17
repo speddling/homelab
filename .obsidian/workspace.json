@@ -186,6 +186,7 @@
   },
   "active": "bffb361906a7587a",
   "lastOpenFiles": [
+    "terraform/monolith",
     "terraform/bootstrap/main.tf.sb-5559f029-BRi9d5",
     "nodes/amd-tower/hardware.md",
     "terraform/modules/navidrome",
@@ -197,7 +198,6 @@
     "terraform/bootstrap/main.tf",
     "terraform/modules",
     "terraform/cluster",
-    "terraform/bootstrap",
     "terraform/README.md",
     "docs/Pipeline considerations.md",
     "docs/homelab-setup-notes.md",
