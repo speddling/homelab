@@ -8,7 +8,7 @@ data:
     {
       "nodePathMap": [
         {
-          "node": "DEFAULT_PATH_FOR_ALL_NODES",
+          "node": "monolith",
           "paths": [
             "/opt/local-path-provisioner",
             "/mnt/k8s-worker",
