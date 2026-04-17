@@ -11,5 +11,6 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Apply Storage Classes
-        run: |
-          sudo k3s kubectl apply -f kubernetes/cluster/storage/
+        run: sudo k3s kubectl apply -f kubernetes/cluster/storage/
+      - name: Deploy Navidrome
+        run: sudo k3s kubectl apply -f kubernetes/apps/navidrome/
