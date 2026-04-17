@@ -6,7 +6,7 @@ on:
       - main
     paths:
       - 'kubernetes/**'
-  workflow_dispatch:  # This adds the manual "Run workflow" button in GitHub
+  workflow_dispatch:
 
 jobs:
   deploy:
@@ -17,26 +17,25 @@ jobs:
 
       - name: Configure Storage Engine
         run: |
-          # 1. Update the ConfigMap to authorize /mnt/k8s-worker and /mnt/lab-backups
-          sudo k3s kubectl apply -f kubernetes/cluster/storage/local-path-config.yaml
+          # Apply the config from the gh-runner workspace
+          sudo k3s kubectl apply -f ${{ github.workspace }}/kubernetes/cluster/storage/local-path-config.yaml
           
-          # 2. Restart the provisioner pod to force it to load the new configuration
+          # Force the provisioner to restart and pick up the new config
           sudo k3s kubectl delete pod -n kube-system -l app=local-path-provisioner --ignore-not-found
 
       - name: Deploy Storage Classes
         run: |
-          # 3. Apply the StorageClasses (fast, slow, tunes)
-          sudo k3s kubectl apply -f kubernetes/cluster/storage/
+          # Apply all storage classes in the directory
+          sudo k3s kubectl apply -f ${{ github.workspace }}/kubernetes/cluster/storage/
 
       - name: Deploy Navidrome
         run: |
-          # 4. Apply Navidrome manifests (PVCs, Deployment, and Service)
-          sudo k3s kubectl apply -f kubernetes/apps/navidrome/
+          # Apply the application manifests
+          sudo k3s kubectl apply -f ${{ github.workspace }}/kubernetes/apps/navidrome/
 
       - name: Verify Deployment Status
         run: |
-          # 5. Output status to the Action log for easy verification
-          echo "Checking Persistent Volume Claims..."
+          echo "--- PVC Status ---"
           sudo k3s kubectl get pvc
-          echo "Checking Pod Status..."
+          echo "--- Pod Status ---"
           sudo k3s kubectl get pods
