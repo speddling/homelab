@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - 'kubernetes/**'
+  workflow_dispatch:  # This adds the manual "Run workflow" button in GitHub
 
 jobs:
   deploy:
