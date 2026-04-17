@@ -186,6 +186,7 @@
   },
   "active": "165dadc935b0cab3",
   "lastOpenFiles": [
+    "kubernetes/cluster/storage/local-path-config.yaml",
     "kubernetes/apps/navidrome/service.yaml",
     "kubernetes/apps/navidrome/deployment.yaml",
     "kubernetes/apps/navidrome/pvc.yaml",
@@ -198,7 +199,6 @@
     "kubernetes/cluster/storage",
     "terraform/monolith/variables.tf",
     "terraform/monolith/main.tf",
-    "terraform/monolith",
     "nodes/amd-tower/hardware.md",
     "docs/Pipeline considerations.md",
     "docs/homelab-setup-notes.md",

@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: local-path-config
+  namespace: kube-system
+data:
+  config.json: |-
+    {
+      "nodePathMap": [
+        {
+          "node": "DEFAULT_PATH_FOR_ALL_NODES",
+          "paths": [
+            "/opt/local-path-provisioner",
+            "/mnt/k8s-worker",
+            "/mnt/lab-backups/music-library"
+          ]
+        }
+      ]
+    }
