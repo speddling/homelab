@@ -1,16 +1,41 @@
-name: Deploy K8s Configuration
+name: Deploy Kubernetes Config
 
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'kubernetes/**'
 
 jobs:
-  apply-storage:
-    runs-on: [self-hosted, monolith]
+  deploy:
+    runs-on: self-hosted
     steps:
-      - name: Checkout Code
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Apply Storage Classes
-        run: sudo k3s kubectl apply -f kubernetes/cluster/storage/
+      - name: Configure Storage Engine
+        run: |
+          # 1. Update the ConfigMap to authorize /mnt/k8s-worker and /mnt/lab-backups
+          sudo k3s kubectl apply -f kubernetes/cluster/storage/local-path-config.yaml
+          
+          # 2. Restart the provisioner pod to force it to load the new configuration
+          sudo k3s kubectl delete pod -n kube-system -l app=local-path-provisioner --ignore-not-found
+
+      - name: Deploy Storage Classes
+        run: |
+          # 3. Apply the StorageClasses (fast, slow, tunes)
+          sudo k3s kubectl apply -f kubernetes/cluster/storage/
+
       - name: Deploy Navidrome
-        run: sudo k3s kubectl apply -f kubernetes/apps/navidrome/
+        run: |
+          # 4. Apply Navidrome manifests (PVCs, Deployment, and Service)
+          sudo k3s kubectl apply -f kubernetes/apps/navidrome/
+
+      - name: Verify Deployment Status
+        run: |
+          # 5. Output status to the Action log for easy verification
+          echo "Checking Persistent Volume Claims..."
+          sudo k3s kubectl get pvc
+          echo "Checking Pod Status..."
+          sudo k3s kubectl get pods
