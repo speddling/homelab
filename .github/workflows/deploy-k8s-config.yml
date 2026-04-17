@@ -15,27 +15,30 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # 1. PERMISSIONS: Update the engine to allow /mnt paths
       - name: Configure Storage Engine
         run: |
-          # Apply the config from the gh-runner workspace
           sudo k3s kubectl apply -f ${{ github.workspace }}/kubernetes/cluster/storage/local-path-config.yaml
-          
-          # Force the provisioner to restart and pick up the new config
           sudo k3s kubectl delete pod -n kube-system -l app=local-path-provisioner --ignore-not-found
 
+      # 2. CLEANUP: Wipe the 30-minute-old "Pending" resources
+      - name: Clean Stale Resources
+        run: |
+          sudo k3s kubectl delete deployment navidrome --ignore-not-found
+          sudo k3s kubectl delete pvc navidrome-db navidrome-music --ignore-not-found
+
+      # 3. STORAGE: Apply the StorageClasses (tunes, fast, slow)
       - name: Deploy Storage Classes
         run: |
-          # Apply all storage classes in the directory
           sudo k3s kubectl apply -f ${{ github.workspace }}/kubernetes/cluster/storage/
 
+      # 4. APPS: Re-deploy Navidrome (which creates fresh PVCs)
       - name: Deploy Navidrome
         run: |
-          # Apply the application manifests
           sudo k3s kubectl apply -f ${{ github.workspace }}/kubernetes/apps/navidrome/
 
-      - name: Verify Deployment Status
+      # 5. FINAL CHECK
+      - name: Verify Deployment
         run: |
-          echo "--- PVC Status ---"
           sudo k3s kubectl get pvc
-          echo "--- Pod Status ---"
           sudo k3s kubectl get pods
