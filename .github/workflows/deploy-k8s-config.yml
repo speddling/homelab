@@ -15,30 +15,31 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 1. PERMISSIONS: Update the engine to allow /mnt paths
       - name: Configure Storage Engine
         run: |
+          # Apply the paths config and bounce the provisioner
           sudo k3s kubectl apply -f ${{ github.workspace }}/kubernetes/cluster/storage/local-path-config.yaml
           sudo k3s kubectl delete pod -n kube-system -l app=local-path-provisioner --ignore-not-found
 
-      # 2. CLEANUP: Wipe the 30-minute-old "Pending" resources
       - name: Clean Stale Resources
         run: |
+          # Remove the 30-minute-old stuck objects
           sudo k3s kubectl delete deployment navidrome --ignore-not-found
           sudo k3s kubectl delete pvc navidrome-db navidrome-music --ignore-not-found
 
-      # 3. STORAGE: Apply the StorageClasses (tunes, fast, slow)
       - name: Deploy Storage Classes
         run: |
+          # Apply the StorageClass definitions
           sudo k3s kubectl apply -f ${{ github.workspace }}/kubernetes/cluster/storage/
 
-      # 4. APPS: Re-deploy Navidrome (which creates fresh PVCs)
       - name: Deploy Navidrome
         run: |
+          # Re-apply Navidrome (which creates fresh PVCs)
           sudo k3s kubectl apply -f ${{ github.workspace }}/kubernetes/apps/navidrome/
 
-      # 5. FINAL CHECK
       - name: Verify Deployment
         run: |
+          echo "Checking volume binding status..."
           sudo k3s kubectl get pvc
+          echo "Checking pod status..."
           sudo k3s kubectl get pods
