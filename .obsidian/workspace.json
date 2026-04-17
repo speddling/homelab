@@ -186,6 +186,7 @@
   },
   "active": "165dadc935b0cab3",
   "lastOpenFiles": [
+    "kubernetes/cluster/storage/tunes.yaml",
     "kubernetes/cluster/storage/Storage Setup.md",
     "terraform/README.md",
     "kubernetes/cluster/storage/slow-hdd.yaml",
