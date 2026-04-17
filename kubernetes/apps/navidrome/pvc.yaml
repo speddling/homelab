@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: navidrome-music
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: tunes # The personal touch
+  resources:
+    requests:
+      storage: 800Gi
