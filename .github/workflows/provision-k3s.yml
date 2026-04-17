@@ -1,0 +1,22 @@
+name: Provision K3s Cluster
+
+on:
+  workflow_dispatch: # This gives you a manual "Play" button in GitHub
+
+jobs:
+  deploy:
+    runs-on: [self-hosted, monolith]
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Init
+        working-directory: ./terraform
+        run: terraform init
+
+      - name: Terraform Apply
+        working-directory: ./terraform
+        run: terraform apply -auto-approve
