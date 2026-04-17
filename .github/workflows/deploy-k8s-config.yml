@@ -12,5 +12,4 @@ jobs:
 
       - name: Apply Storage Classes
         run: |
-          sudo k3s kubectl apply -f kubernetes/storage/fast-ssd.yaml
-          sudo k3s kubectl apply -f kubernetes/storage/slow-hdd.yaml
+          sudo k3s kubectl apply -f kubernetes/cluster/storage/
