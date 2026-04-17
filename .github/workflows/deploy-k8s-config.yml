@@ -1,0 +1,16 @@
+name: Deploy K8s Configuration
+
+on:
+  workflow_dispatch:
+
+jobs:
+  apply-storage:
+    runs-on: [self-hosted, monolith]
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Apply Storage Classes
+        run: |
+          sudo k3s kubectl apply -f kubernetes/storage/fast-ssd.yaml
+          sudo k3s kubectl apply -f kubernetes/storage/slow-hdd.yaml
