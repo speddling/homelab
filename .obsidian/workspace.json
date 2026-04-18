@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "nodes/amd-tower/hardware.md",
+                "file": "README.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "hardware"
+              "title": "README"
             }
           }
         ]
@@ -186,6 +186,7 @@
   },
   "active": "165dadc935b0cab3",
   "lastOpenFiles": [
+    "nodes/amd-tower/hardware.md",
     "kubernetes/cluster/storage/local-path-config.yaml",
     "kubernetes/apps/navidrome/service.yaml",
     "kubernetes/apps/navidrome/deployment.yaml",
@@ -198,8 +199,6 @@
     "kubernetes/cluster/storage/fast-ssd.yaml",
     "kubernetes/cluster/storage",
     "terraform/monolith/variables.tf",
-    "terraform/monolith/main.tf",
-    "nodes/amd-tower/hardware.md",
     "docs/Pipeline considerations.md",
     "docs/homelab-setup-notes.md",
     "docs/homelab-overview.md",
