@@ -305,3 +305,66 @@ If you ever start writing your own code or custom manifests and hate waiting for
 Don't over-tool yet. Start with **k9s**. It will give you a "god-view" of your Monolith from your Mac terminal while that 800GB transfer is running. You can watch the Navidrome logs in real-time to see when it starts scanning those new folders.
 
 **Are you planning on keeping the Monolith as a single "all-in-one" node, or are you thinking about adding more hardware later?** That usually dictates which orchestrator (Terraform vs. Ansible vs. Flux) wins.
+
+
+
+-------------------------
+
+k9s sound like a logical step, is it on MacPort?
+Terraform provisioned Monolith and deployed the K3s
+#3 sound cool, but is a 'later' addition.
+
+  
+
+For now, Monolith is the hardware I own. I think next steps will be grabbing an 8TB HDD to replace the vintage 2TB HDD and replacing my A10 cpu with a best I can get cheap Ryzen upgrade and possibly max out the ram with speed and spec to match the A10 -> Ryzen move
+
+Yes, **k9s** is on MacPorts. You can grab it with: `sudo port install k9s`
+
+It’s the perfect "cockpit" for your Mac terminal. While that 800GB rsync is chugging along, you can open k9s, hit `:pods`, and watch the Navidrome logs in real-time to see if it starts freaking out (or successfully scanning) as the music files land.
+
+---
+
+### The "A10 to Ryzen" Upgrade Path
+
+Since you’re on an A10 (likely an A10-9700), you’re on the **AM4 socket**. This is great news because you have a massive upgrade path, but there are two major "gotchas" for a Homelab build:
+
+#### 1. The "Cheap but Powerful" Sweet Spot
+
+The **Ryzen 5 5600G** is currently the king of budget server upgrades for your board.
+
+- **Why the "G"?** Since your Monolith is a headless server, having integrated graphics (APU) is a lifesaver for troubleshooting. More importantly, Navidrome/Plex/Jellyfin can use that integrated GPU for **hardware transcoding**, which keeps your CPU usage at 1% even when streaming high-bitrate video.
+    
+- **Performance:** You go from 4 weak cores to 6 very fast cores (12 threads). It will handle K3s and Navidrome without breaking a sweat.
+    
+
+#### 2. The RAM Trap
+
+- **Speed:** Ryzen _loves_ fast RAM. Your A10 probably has 2133MHz or 2400MHz DDR4. If you stick with that, you’ll bottleneck the Ryzen. Aim for **3200MHz CL16**—it’s the "sweet spot" for price and performance.
+    
+- **Spec:** Ensure it's non-ECC unbuffered DDR4 (standard desktop RAM). Maxing out at **32GB** (2x16GB) is usually plenty for a Monolith running K3s and a large media library.
+    
+
+#### 3. The BIOS Warning (Critical!)
+
+**Do not swap the CPUs until you update the BIOS.** Your current motherboard BIOS was written before Ryzen 5000 existed. You must:
+
+1. Keep the A10 installed.
+    
+2. Download the latest BIOS from your motherboard manufacturer.
+    
+3. Flash it.
+    
+4. _Then_ swap in the Ryzen. _(Note: Some older boards actually drop support for the A10 once you flash the "Ryzen-ready" BIOS, so once you flash it, you might be committed to the swap immediately.)_
+    
+
+---
+
+### The Storage Move
+
+Replacing the "vintage" 2TB with an **8TB HDD** is a solid move. When that time comes, since you’re already comfortable with `rsync`, you’ll just:
+
+1. Mount the new 8TB as `/mnt/lab-backups-new`.
+    
+2. Rsync everything from the 2TB to the 8TB.
+    
+3. Update your Terraform/Kubernetes `hostPath` to point to the new disk.
