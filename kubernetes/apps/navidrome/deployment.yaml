@@ -26,11 +26,11 @@ spec:
           mountPath: /data
         - name: music-storage
           mountPath: /music
-volumes:
-      - name: db-storage
-        persistentVolumeClaim:
-          claimName: navidrome-db
-      - name: music-storage
-        hostPath:
-          path: /mnt/lab-backups/music-library
-          type: DirectoryOrCreate
+      volumes:
+        - name: db-storage
+          persistentVolumeClaim:
+            claimName: navidrome-db
+        - name: music-storage
+          hostPath:
+            path: /mnt/lab-backups/music-library
+            type: DirectoryOrCreate
