@@ -3,6 +3,8 @@ kind: StorageClass
 metadata:
   name: tunes
 provisioner: rancher.io/local-path
-volumeBindingMode: WaitForFirstConsumer
 parameters:
-  nodePath: /mnt/lab-backups/music-library # Temporary home on the HDD
+  # This MUST match the path in your local-path-config exactly
+  nodePath: /mnt/lab-backups/music-library
+reclaimPolicy: Retain
+volumeBindingMode: WaitForFirstConsumer
