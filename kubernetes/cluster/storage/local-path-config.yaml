@@ -10,9 +10,11 @@ data:
         {
           "node": "monolith",
           "paths": [
-            "/opt/local-path-provisioner",
+            # 1. Prioritize the HDD mount point to ensure it is selected first
+            "/mnt/lab-backups/music-library",
+            # 2. Secondary/Fallback paths (optional, consider removing to force failure if HDD is unmounted)
             "/mnt/k8s-worker",
-            "/mnt/lab-backups/music-library"
+            "/opt/local-path-provisioner"
           ]
         }
       ]
