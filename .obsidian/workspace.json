@@ -186,6 +186,7 @@
   },
   "active": "165dadc935b0cab3",
   "lastOpenFiles": [
+    "kubernetes/apps/navidrome/ingress.yaml",
     "nodes/amd-tower/hardware.md",
     "kubernetes/cluster/storage/local-path-config.yaml",
     "kubernetes/apps/navidrome/service.yaml",
