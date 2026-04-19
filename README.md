@@ -23,7 +23,7 @@ Personal Kubernetes home lab documentation, configurations, and manifests.
 - Navidrome audio server with ~1TB FLAC/MP3 library
 
 ## Next Project
-- File server, local backup solution for daughter's iPad art and wife's 
+- File server, local backup solution for daughter's iPad art and wife's crochet patterns & notes
 
 ## Status
 Online
