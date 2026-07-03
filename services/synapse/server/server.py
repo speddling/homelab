@@ -7,7 +7,7 @@ entirely within the LAN.
 
 Tools:
   k8s_*    read-only kubectl operations via the Python kubernetes client
-  prom_*   PromQL queries against Prometheus on Watchtower (192.168.0.21)
+  prom_*   PromQL queries against Prometheus on Watchtower (192.168.30.11)
   fs_*     read-only filesystem access, path-allowlisted via ALLOWED_READ_PATHS
 
 Transport: Streamable HTTP via FastMCP (supports both legacy SSE and current protocol)
@@ -30,7 +30,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger("synapse")
 
-PROMETHEUS_URL = os.environ.get("PROMETHEUS_URL", "http://192.168.0.21:9090")
+PROMETHEUS_URL = os.environ.get("PROMETHEUS_URL", "http://192.168.30.11:9090")
 ALLOWED_READ_PATHS = [
     p.strip()
     for p in os.environ.get("ALLOWED_READ_PATHS", "/mnt/ssd-a").split(",")
@@ -116,7 +116,11 @@ def k8s_describe_pod(namespace: str, pod_name: str) -> str:
             f"mem={req.get('memory','-')}/{lim.get('memory','-')}"
         )
     lines.append("\nRecent Events:")
-    for ev in sorted(events.items, key=lambda e: e.last_timestamp or "", reverse=True)[:10]:
+    for ev in sorted(
+        events.items,
+        key=lambda e: e.last_timestamp.isoformat() if e.last_timestamp else "",
+        reverse=True,
+    )[:10]:
         lines.append(f"  [{ev.type}] {ev.reason}: {ev.message}")
     return "\n".join(lines)
 
