@@ -23,7 +23,7 @@ ip_reolink_nvr:        "192.168.10.111"  # named IPC-BO in Omada
 ip_eap_up:             "192.168.10.106"  # Upstairs Hall
 ip_eap_out:            ""                # not yet installed
 ip_sg2218p:            "192.168.10.115"
-ip_oc200:              "192.168.10.104"
+ip_oc200:              "192.168.10.3"
 ip_apex:               "192.168.10.107"
 ip_monolith:           "192.168.30.10"
 ip_watchtower:         "192.168.30.11"
