@@ -87,6 +87,7 @@ port_promtail:           9080
 port_promtail_syslog:    1514   # non-privileged syslog receiver (ER605 → Watchtower)
 port_scribe:             8765
 port_argus_mcp:          9800
+port_k3s_api:            6443   # kubectl / API server
 
 # -----------------------------------------------------------------------------
 # Obelisk — KubeVirt Windows 11 VM
