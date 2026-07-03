@@ -50,8 +50,9 @@ Monolith (192.168.0.20 / monolith.littlewolfacres.com)
 | `adguard` | `localhost:9618` | DNS query counts, block rates |
 | `monolith` | `monolith.littlewolfacres.com:9100` → labelled `instance=monolith` | Host CPU, memory, disk, network |
 | `snmp-er605` | `192.168.0.1` via SNMP exporter | Router interface stats (ifHCInOctets, ifOperStatus, etc.) |
-| `snmp-eap-yarn-studio` | `192.168.0.5` via SNMP exporter | AP interface stats |
-| `snmp-eap-foyer` | `192.168.0.2` via SNMP exporter | AP interface stats |
+| `snmp-eap-up` | Upstairs Hall EAP245, via SNMP exporter | AP interface stats |
+| `snmp-eap-down` | Downstairs Hall EAP245, via SNMP exporter | AP interface stats |
+| `snmp-sg2218p` | SG2218P switch, via SNMP exporter | Switch interface stats |
 | `tmobile` | `localhost:9719` | Gateway signal, band, uptime |
 | `reolink_nvr` | `localhost:9720` | NVR up, device info, channel online, HDD usage |
 | `kube-state-metrics` | `monolith.littlewolfacres.com:30900` | k3s pod, deployment, PVC, namespace state |
@@ -436,22 +437,26 @@ Key metrics produced:
 
 ### Pending additions
 
-Commented scrape job stubs already exist in `prometheus.yml.j2` for the incoming SG2218P
-managed switch and the EAP225-Outdoor AP. Once those devices are installed and assigned
-IPs, set `ip_sg2218p` / `ip_eap225_outdoor` in `ansible/vars/main.yml` and uncomment the
-corresponding `snmp-sg2218p` / `snmp-eap-outdoor` jobs. See `docs/network-rebuild-plan.md`
-for the full VLAN migration this is part of.
+A commented scrape job stub already exists in `prometheus.yml.j2` for the outdoor AP
+(garage / future livestock area). SG2218P is now live (`snmp-sg2218p`). Once the
+outdoor AP is installed and assigned an IP, set `ip_eap_out` in `ansible/vars/main.yml`
+and uncomment the `snmp-eap-out` job. See `docs/network-migration-runbook.md` for the
+full VLAN migration this is part of.
+
+> **Naming note:** SNMP job/var names for the APs are location-based (`snmp-eap-up`,
+> `snmp-eap-down`, `ip_eap_up`, `ip_eap_down`) rather than tied to the current EAP245
+> hardware model, specifically so a future AP model swap doesn't require a rename.
 
 ### Testing SNMP manually
 
 ```bash
 # Verify SNMP reachability (run on watchtower)
-snmpwalk -v2c -c littlewolfacres 192.168.0.1 1.3.6.1.2.1.1.1.0   # ER605
-snmpwalk -v2c -c littlewolfacres 192.168.0.5 1.3.6.1.2.1.1.1.0   # EAP Yarn Studio
-snmpwalk -v2c -c littlewolfacres 192.168.0.2 1.3.6.1.2.1.1.1.0   # EAP Foyer
+snmpwalk -v2c -c littlewolfacres 192.168.10.1 1.3.6.1.2.1.1.1.0   # ER605
+snmpwalk -v2c -c littlewolfacres 192.168.10.106 1.3.6.1.2.1.1.1.0   # EAP Upstairs Hall
+snmpwalk -v2c -c littlewolfacres 192.168.10.114 1.3.6.1.2.1.1.1.0   # EAP Downstairs Hall
 
 # Query SNMP exporter directly for ER605
-curl "http://localhost:9116/snmp?module=if_mib&auth=littlewolfacres_v2&target=192.168.0.1"
+curl "http://localhost:9116/snmp?module=if_mib&auth=littlewolfacres_v2&target=192.168.10.1"
 
 # Verify metrics land in Prometheus
 curl -s 'http://localhost:9090/api/v1/query?query=ifHCInOctets{job="snmp-er605"}' | python3 -m json.tool

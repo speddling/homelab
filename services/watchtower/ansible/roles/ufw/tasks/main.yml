@@ -30,7 +30,7 @@
     rule: allow
     port: "{{ port_ssh }}"
     proto: tcp
-    src: "192.168.20.0/24"
+    src: "192.168.0.0/16"
 
 - name: Allow DNS from Mgmt VLAN
   community.general.ufw:
@@ -67,49 +67,49 @@
     rule: allow
     port: "{{ port_adguard_ui }}"
     proto: tcp
-    src: "192.168.20.0/24"
+    src: "192.168.0.0/16"
 
 - name: Allow Grafana from Users VLAN
   community.general.ufw:
     rule: allow
     port: "{{ port_grafana }}"
     proto: tcp
-    src: "192.168.20.0/24"
+    src: "192.168.0.0/16"
 
 - name: Allow Prometheus from Infra VLAN
   community.general.ufw:
     rule: allow
     port: "{{ port_prometheus }}"
     proto: tcp
-    src: "192.168.30.0/24"
+    src: "192.168.0.0/16"
 
 - name: Allow Netdata from Users VLAN
   community.general.ufw:
     rule: allow
     port: "{{ port_netdata }}"
     proto: tcp
-    src: "192.168.20.0/24"
+    src: "192.168.0.0/16"
 
 - name: Allow AdGuard exporter from Infra VLAN
   community.general.ufw:
     rule: allow
     port: "{{ port_adguard_exporter }}"
     proto: tcp
-    src: "192.168.30.0/24"
+    src: "192.168.0.0/16"
 
 - name: Allow SNMP exporter from Infra VLAN
   community.general.ufw:
     rule: allow
     port: "{{ port_snmp_exporter }}"
     proto: tcp
-    src: "192.168.30.0/24"
+    src: "192.168.0.0/16"
 
 - name: Allow Argus MCP from Users VLAN
   community.general.ufw:
     rule: allow
     port: "{{ port_argus_mcp }}"
     proto: tcp
-    src: "192.168.20.0/24"
+    src: "192.168.0.0/16"
 
 - name: Allow Promtail syslog from all VLANs
   community.general.ufw:
