@@ -94,6 +94,7 @@ port_argus_mcp:          9800
 fqdn_obelisk:                  "obelisk.littlewolfacres.com"
 port_obelisk_rdp:              33389   # NodePort — RDP (3389 inside VM)
 port_obelisk_metrics:          39182   # NodePort — windows_exporter (9182 inside VM)
+port_obelisk_vnc:              5900    # Console access during VM bootstrap/rebuild
 
 # -----------------------------------------------------------------------------
 # SSH / Ansible connection
