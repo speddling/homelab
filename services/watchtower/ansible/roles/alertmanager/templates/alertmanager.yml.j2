@@ -30,7 +30,7 @@ receivers:
         title: '{{ "{{" }} if eq .Status "firing" {{ "}}" }}🔴 {{ "{{" }} else {{ "}}" }}🟢 RECOVERED — {{ "{{" }} end {{ "}}" }}{{ "{{" }} .CommonLabels.alertname {{ "}}" }}'
         text: |
           {{ "{{" }} range .Alerts {{ "}}" -}}
-          *Host:* {{ "{{" }} .Labels.host | default "unknown" {{ "}}" }}   *Severity:* {{ "{{" }} .Labels.severity {{ "}}" }}
+          *Host:* {{ "{{" }} if .Labels.host {{ "}}" }}{{ "{{" }} .Labels.host {{ "}}" }}{{ "{{" }} else {{ "}}" }}unknown{{ "{{" }} end {{ "}}" }}   *Severity:* {{ "{{" }} .Labels.severity {{ "}}" }}
           {{ "{{" }}- if eq .Status "firing" {{ "}}" }}
           *Description:* {{ "{{" }} .Annotations.description {{ "}}" }}
           *Fired at:* {{ "{{" }} .StartsAt.Format "Jan 2, 3:04 PM MST" {{ "}}" }}

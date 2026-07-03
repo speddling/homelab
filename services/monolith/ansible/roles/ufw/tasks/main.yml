@@ -6,6 +6,7 @@
 #
 # Port inventory:
 #   22    SSH              — apex + studio only
+#   6443  k3s API (kubectl) — apex only
 #   80    Traefik HTTP     — LAN (redirects to 443)
 #   443   Traefik HTTPS    — LAN (ArgoCD, Navidrome, future ingress)
 #   139   Samba NetBIOS    — LAN
@@ -48,6 +49,13 @@
     port: "{{ port_ssh }}"
     proto: tcp
     src: "{{ ip_studio }}"
+
+- name: Allow k3s API (kubectl) from apex
+  community.general.ufw:
+    rule: allow
+    port: "{{ port_k3s_api }}"
+    proto: tcp
+    src: "{{ ip_apex }}"
 
 # ── Traefik ingress ────────────────────────────────────────────────────────
 
