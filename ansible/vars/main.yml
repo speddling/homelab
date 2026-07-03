@@ -12,25 +12,22 @@
 # -----------------------------------------------------------------------------
 # Network — IP addresses
 # -----------------------------------------------------------------------------
-# CUTOVER TARGETS (the held PR #166 flips these to VLAN addressing):
-#   ip_apex       -> 192.168.20.2   (Users VLAN 20, MAC-bound reservation)
-#   ip_studio     -> 192.168.20.3   (Users VLAN 20, MAC-bound reservation)
-#   ip_monolith   -> 192.168.30.10  (Infra VLAN 30)
-#   ip_watchtower -> 192.168.30.11  (Infra VLAN 30, DNS/AdGuard)
-#   ip_reolink_nvr-> 192.168.40.10  (IoT VLAN 40)
-# Hosts/APs/switch get their VLAN addresses when adopted/reserved at cutover.
-# Changing the values below sweeps every ip_*-referencing template (e.g. the
-# AdGuard rewrites). Do NOT flip until the cutover window.
-ip_er605:              "192.168.0.1"
-ip_eap245_foyer:       "192.168.0.2"
-ip_reolink_nvr:         "192.168.40.10"
-ip_eap245_yarn_studio: "192.168.0.5"
-ip_eap225_outdoor:     ""          # assign when EAP225-Outdoor is installed
-ip_sg2218p:            ""          # assign when SG2218P switch is installed
-ip_apex:               "192.168.20.2"
+# Current live addressing. Only Mgmt VLAN 10 and Infra VLAN 30 are populated;
+# Users/IoT/Guest (20/40/50) are not yet in use. Changing these sweeps every
+# ip_*-referencing template (AdGuard rewrites, SNMP scrape targets, UFW).
+# Migration tracking and follow-up work: Plane, LWA Infra project.
+# -----------------------------------------------------------------------------
+ip_er605:              "192.168.10.1"
+ip_eap_down:           "192.168.10.114"  # Downstairs Hall
+ip_reolink_nvr:        "192.168.10.111"  # named IPC-BO in Omada
+ip_eap_up:             "192.168.10.106"  # Upstairs Hall
+ip_eap_out:            ""                # not yet installed
+ip_sg2218p:            "192.168.10.115"
+ip_oc200:              "192.168.10.104"
+ip_apex:               "192.168.10.107"
 ip_monolith:           "192.168.30.10"
 ip_watchtower:         "192.168.30.11"
-ip_studio:             "192.168.20.3"
+ip_studio:             "192.168.10.109"
 
 # -----------------------------------------------------------------------------
 # Omada Open API (Platform Integration, Client Credentials app)

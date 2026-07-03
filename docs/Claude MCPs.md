@@ -10,7 +10,7 @@ Four MCP servers give Claude structured access to the homelab. Three are in-hous
 | **Argus** | watchtower | Live monitoring configs, systemd, journald, Alertmanager API, Prometheus rules | 9800 | Streamable HTTP (FastMCP · systemd) |
 | **Atlas** | apex (local subprocess) | Plane project management — work items, modules, cycles, projects | — (stdio, no listening port) | stdio (official `makeplane/plane-mcp-server` via `uvx`) |
 
-Synapse, Scribe, and Argus follow the same security pattern: dedicated system user, no shell, UFW-restricted to apex (`192.168.0.19`), no write surface except where explicitly scoped (Scribe — git only, branch-protected). **Atlas is architecturally different and unscoped — see its section below before assuming the same guardrails apply.**
+Synapse, Scribe, and Argus follow the same security pattern: dedicated system user, no shell, UFW-restricted to apex (`{{ ip_apex }}` in `ansible/vars/main.yml`, currently `192.168.10.107`), no write surface except where explicitly scoped (Scribe — git only, branch-protected). **Atlas is architecturally different and unscoped — see its section below before assuming the same guardrails apply.**
 
 ---
 
@@ -75,7 +75,7 @@ Named for the neural connection — the junction between Claude and the homelab'
 ### Deployment
 
 - **Host:** `monolith.littlewolfacres.com`
-- **Port:** `30800` (UFW restricts to `apex` only — `192.168.0.19`)
+- **Port:** `30800` (UFW restricts to `apex` only, var-driven via `ip_apex` — currently `192.168.10.107`)
 - **Transport:** Streamable HTTP (FastMCP)
 - **Deploy method:** Kubernetes (namespace: `synapse`) — GitHub Actions `deploy-synapse.yml`
 - **Image:** `ghcr.io/speddling/synapse:latest`
@@ -103,7 +103,7 @@ services/synapse/
 
 | Control | Detail |
 |---|---|
-| Network | UFW: port 30800 allowed from `192.168.0.19` (apex) only |
+| Network | UFW: port 30800 allowed from `{{ ip_apex }}` (apex) only — currently `192.168.10.107` |
 | k8s permissions | Custom ClusterRole: read-only get/list/watch + pods/log. No write, no exec, no secrets. |
 | Filesystem | hostPath volumes mounted `readOnly: true`. Path allowlist enforced in `server.py`. |
 | Prometheus | Read-only HTTP queries against Watchtower |
@@ -323,7 +323,7 @@ Query `/api/v1/rules` — returns all alert rules currently loaded by Prometheus
 ### Deployment
 
 - **Host:** `watchtower.littlewolfacres.com`
-- **Port:** `9800` (UFW restricts to `apex` only — `192.168.0.19`)
+- **Port:** `9800` (UFW restricts to `apex` only, var-driven via `ip_apex` — currently `192.168.10.107`)
 - **User:** `argus` (dedicated system user, no shell, no home dir)
 - **Venv:** `/opt/argus/venv`
 - **Script:** `/opt/argus/server.py`
@@ -333,7 +333,7 @@ Query `/api/v1/rules` — returns all alert rules currently loaded by Prometheus
 
 ### Security
 
-- Listens on all interfaces, UFW restricted to `192.168.0.19` (apex)
+- Listens on all interfaces, UFW restricted to `{{ ip_apex }}` (apex) — currently `192.168.10.107`
 - Runs as the `argus` system user — no sudo, no shell
 - Filesystem reads allowlisted in the systemd `Environment=` — not user-supplied at runtime
 - Unit name validation for `systemd_status` and `journald_tail` — regex whitelist, no shell passthrough (`subprocess` list args only)

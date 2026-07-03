@@ -99,9 +99,9 @@ scrape_configs:
       - target_label: __address__
         replacement: localhost:{{ port_snmp_exporter }}
 
-  - job_name: 'snmp-eap-yarn-studio'
+  - job_name: 'snmp-eap-up'
     static_configs:
-      - targets: ['{{ ip_eap245_yarn_studio }}']
+      - targets: ['{{ ip_eap_up }}']
     metrics_path: /snmp
     params:
       module: [if_mib]
@@ -114,9 +114,9 @@ scrape_configs:
       - target_label: __address__
         replacement: localhost:{{ port_snmp_exporter }}
 
-  - job_name: 'snmp-eap-foyer'
+  - job_name: 'snmp-eap-down'
     static_configs:
-      - targets: ['{{ ip_eap245_foyer }}']
+      - targets: ['{{ ip_eap_down }}']
     metrics_path: /snmp
     params:
       module: [if_mib]
@@ -129,27 +129,29 @@ scrape_configs:
       - target_label: __address__
         replacement: localhost:{{ port_snmp_exporter }}
 
-  # ── Uncomment when SG2218P and EAP225-Outdoor are installed ──────────────
-  # Set ip_sg2218p and ip_eap225_outdoor in ansible/vars/main.yml first.
+  # ── SG2218P (live on Mgmt VLAN 10, interim address -- see ansible/vars/main.yml) ──
 
-  # - job_name: 'snmp-sg2218p'
-  #   static_configs:
-  #     - targets: ['{{ ip_sg2218p }}']
-  #   metrics_path: /snmp
-  #   params:
-  #     module: [if_mib]
-  #     auth: ['{{ snmp_auth_module }}']
-  #   relabel_configs:
-  #     - source_labels: [__address__]
-  #       target_label: __param_target
-  #     - source_labels: [__param_target]
-  #       target_label: instance
-  #     - target_label: __address__
-  #       replacement: localhost:{{ port_snmp_exporter }}
+  - job_name: 'snmp-sg2218p'
+    static_configs:
+      - targets: ['{{ ip_sg2218p }}']
+    metrics_path: /snmp
+    params:
+      module: [if_mib]
+      auth: ['{{ snmp_auth_module }}']
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: localhost:{{ port_snmp_exporter }}
 
-  # - job_name: 'snmp-eap-outdoor'
+  # ── Uncomment when the outdoor AP (garage / future livestock area) is installed ──
+  # Set ip_eap_out in ansible/vars/main.yml first.
+
+  # - job_name: 'snmp-eap-out'
   #   static_configs:
-  #     - targets: ['{{ ip_eap225_outdoor }}']
+  #     - targets: ['{{ ip_eap_out }}']
   #   metrics_path: /snmp
   #   params:
   #     module: [if_mib]
