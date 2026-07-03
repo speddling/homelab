@@ -149,6 +149,26 @@
     proto: tcp
     src: "{{ ip_watchtower }}"
 
+- name: Allow Obelisk VNC console from apex
+  community.general.ufw:
+    rule: allow
+    port: "{{ port_obelisk_vnc }}"
+    proto: tcp
+    src: "{{ ip_apex }}"
+
+# ── Forwarding ─────────────────────────────────────────────────────────────
+# k3s pod subnet -> watchtower. Purpose inferred, not confirmed: likely lets
+# pods (e.g. Synapse's prom_query tool) reach Prometheus on watchtower
+# directly. Existed as an untracked manual rule pointed at watchtower's old
+# IP before being brought into this role -- verify it's still needed next
+# time this is touched.
+- name: Allow k3s pod subnet to reach watchtower (forward)
+  community.general.ufw:
+    rule: allow
+    route: true
+    src: "10.42.0.0/24"
+    dest: "{{ ip_watchtower }}"
+
 # ── Enable UFW ─────────────────────────────────────────────────────────────
 
 - name: Enable UFW

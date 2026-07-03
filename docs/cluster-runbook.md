@@ -83,6 +83,22 @@ kubectl get certificate -n argocd
 kubectl get ingress -A
 ```
 
+### GitHub Actions Runner — Host Key Verification Failed
+
+`deploy-monolith.yml` runs `on: [self-hosted, monolith]` — the runner lives on
+monolith itself and SSHes back to `192.168.30.10` (itself) as `speddling`. The
+runner service runs as system user **`gh-runner`**, whose `~/.ssh/known_hosts`
+is what needs clearing when monolith's host key changes (IP moves, reimages,
+etc.) — not apex's, and not `speddling`'s.
+
+```bash
+sudo -u gh-runner -i
+ssh-keygen -R 192.168.30.10
+ssh -i ~/.ssh/id_ed25519 speddling@192.168.30.10 hostname   # accept new key, confirm "monolith"
+exit
+gh workflow run deploy-monolith.yml
+```
+
 ### Common Operations
 
 ```bash
