@@ -85,18 +85,32 @@ kubectl get ingress -A
 
 ### GitHub Actions Runner — Host Key Verification Failed
 
-`deploy-monolith.yml` runs `on: [self-hosted, monolith]` — the runner lives on
-monolith itself and SSHes back to `192.168.30.10` (itself) as `speddling`. The
-runner service runs as system user **`gh-runner`**, whose `~/.ssh/known_hosts`
-is what needs clearing when monolith's host key changes (IP moves, reimages,
-etc.) — not apex's, and not `speddling`'s.
+Both `deploy-monolith.yml` and `deploy-watchtower.yml` run `on: [self-hosted, <host>]`
+— each runner lives on its own target host and SSHes back to itself. The
+account that needs its `~/.ssh/known_hosts` cleared when the host's key
+changes is whichever user owns the runner process — **this differs per
+host right now**, so check before assuming:
+
+| Host | Runner process user |
+|---|---|
+| monolith | `gh-runner` |
+| watchtower | `speddling` (inconsistent — should be `gh-runner` too; tracked in Plane) |
 
 ```bash
+# Check which user actually owns it, don't assume:
+systemctl status 'actions.runner.*'
+
+# Monolith
 sudo -u gh-runner -i
 ssh-keygen -R 192.168.30.10
 ssh -i ~/.ssh/id_ed25519 speddling@192.168.30.10 hostname   # accept new key, confirm "monolith"
 exit
 gh workflow run deploy-monolith.yml
+
+# Watchtower (currently runs as speddling directly, no sudo -u needed)
+ssh-keygen -R 192.168.30.11
+ssh -i ~/.ssh/id_ed25519 speddling@192.168.30.11 hostname   # accept new key, confirm "watchtower"
+gh workflow run deploy-watchtower.yml
 ```
 
 ### Common Operations
