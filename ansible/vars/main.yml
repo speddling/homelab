@@ -12,22 +12,32 @@
 # -----------------------------------------------------------------------------
 # Network — IP addresses
 # -----------------------------------------------------------------------------
-# Current live addressing. Only Mgmt VLAN 10 and Infra VLAN 30 are populated;
-# Users/IoT/Guest (20/40/50) are not yet in use. Changing these sweeps every
-# ip_*-referencing template (AdGuard rewrites, SNMP scrape targets, UFW).
+# Current live addressing. Mgmt (10), Users (20), Infra (30), and IoT (40, NVR
+# only so far) are populated; Guest (50) and the rest of IoT are not yet in
+# use. Changing these sweeps every ip_*-referencing template (AdGuard
+# rewrites, SNMP scrape targets, UFW).
+# Verified 2026-07-05 against a live Omada DeviceList/OnlineClient export --
+# four of these (reolink_nvr, eap_down, eap_up, sg2218p) had drifted from
+# reality and were silently wrong until this pass. Re-verify against a fresh
+# Omada export rather than trusting this file blindly if anything here is
+# ever in question again.
 # Migration tracking and follow-up work: Plane, LWA Infra project.
 # -----------------------------------------------------------------------------
 ip_er605:              "192.168.10.1"
-ip_eap_down:           "192.168.10.114"  # Downstairs Hall
-ip_reolink_nvr:        "192.168.10.111"  # named IPC-BO in Omada
-ip_eap_up:             "192.168.10.106"  # Upstairs Hall
+ip_eap_down:           "192.168.10.101"  # Downstairs Hall
+ip_reolink_nvr:        "192.168.40.10"   # "Big Brother" / IPC-BO in Omada -- IoT VLAN 40
+ip_eap_up:             "192.168.10.100"  # Upstairs Hall
 ip_eap_out:            ""                # not yet installed
-ip_sg2218p:            "192.168.10.115"
+ip_sg2218p:            "192.168.10.102"
 ip_oc200:              "192.168.10.3"
-ip_apex:               "192.168.10.107"
+ip_apex:               "192.168.20.2"    # Users VLAN 20, WiFi reservation
+ip_studio_dock_mgmt:   "192.168.10.7"    # Studio's docked Ethernet port (ER605 LAN port 4) -- deliberately Mgmt,
+                                          # not Users: this is out-of-band emergency access to the OC200/ER605/
+                                          # switch when the network itself is degraded, so it can't depend on
+                                          # Users VLAN being healthy. Occasional/physical, not always-on.
 ip_monolith:           "192.168.30.10"
 ip_watchtower:         "192.168.30.11"
-ip_studio:             "192.168.10.109"
+ip_studio:             "192.168.20.3"    # Users VLAN 20, WiFi reservation
 
 # -----------------------------------------------------------------------------
 # Omada Open API (Platform Integration, Client Credentials app)
