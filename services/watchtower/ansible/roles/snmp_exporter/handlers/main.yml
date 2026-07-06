@@ -1,0 +1,9 @@
+---
+- name: reload systemd
+  systemd:
+    daemon_reload: yes
+
+- name: restart snmp_exporter
+  systemd:
+    name: snmp_exporter
+    state: restarted

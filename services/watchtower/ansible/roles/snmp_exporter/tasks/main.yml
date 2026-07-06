@@ -1,0 +1,54 @@
+---
+- name: Check if snmp_exporter is already installed
+  stat:
+    path: /usr/local/bin/snmp_exporter
+  register: snmp_exporter_binary
+
+- name: Download snmp_exporter tarball
+  get_url:
+    url: https://github.com/prometheus/snmp_exporter/releases/download/v0.26.0/snmp_exporter-0.26.0.linux-amd64.tar.gz
+    dest: /tmp/snmp_exporter.tar.gz
+  when: not snmp_exporter_binary.stat.exists
+
+- name: Extract snmp_exporter
+  unarchive:
+    src: /tmp/snmp_exporter.tar.gz
+    dest: /tmp/
+    remote_src: yes
+  when: not snmp_exporter_binary.stat.exists
+
+- name: Install snmp_exporter binary
+  copy:
+    src: "/tmp/snmp_exporter-0.26.0.linux-amd64/snmp_exporter"
+    dest: /usr/local/bin/snmp_exporter
+    owner: root
+    group: root
+    mode: '0755'
+    remote_src: yes
+  when: not snmp_exporter_binary.stat.exists
+
+- name: Deploy snmp_exporter config
+  template:
+    src: snmp.yml.j2
+    dest: /etc/prometheus/snmp.yml
+    owner: root
+    group: root
+    mode: '0644'
+  notify: restart snmp_exporter
+
+- name: Deploy snmp_exporter systemd unit
+  template:
+    src: snmp_exporter.service.j2
+    dest: /etc/systemd/system/snmp_exporter.service
+    owner: root
+    group: root
+    mode: '0644'
+  notify:
+    - reload systemd
+    - restart snmp_exporter
+
+- name: Enable and start snmp_exporter
+  systemd:
+    name: snmp_exporter
+    enabled: yes
+    state: started
