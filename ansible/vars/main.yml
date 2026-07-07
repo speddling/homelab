@@ -179,6 +179,11 @@ reolink_scrape_port:  "{{ port_reolink_exporter }}"
 reolink_poll_interval: 30
 # NVR password: vault_reolink_nvr_password (see vault.yml)
 
+# Channel shown on the Homelab Overview dashboard's camera panel (0-indexed;
+# NVR UI's "CHnn" labels are 1-indexed, so CH04 in the UI = channel 3 here).
+# Currently "Temp Road View" -- update when the permanent camera is wired.
+camera_dashboard_channel: 3
+
 # -----------------------------------------------------------------------------
 # Watchtower — NUT (UPS monitoring)
 # -----------------------------------------------------------------------------

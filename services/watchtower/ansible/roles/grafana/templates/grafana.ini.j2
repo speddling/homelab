@@ -31,3 +31,11 @@ enabled = false
 [log]
 mode = console
 level = warn
+
+[panels]
+# Required for the Homelab Overview dashboard's camera-feed panel, which
+# embeds a raw <img> tag pointing at the NVR's snapshot endpoint. Grafana
+# strips HTML from Text panels by default; this disables that sanitization
+# instance-wide. Everything on this Grafana is internal/homelab-authored,
+# so the tradeoff is acceptable here.
+disable_sanitize_html = true
