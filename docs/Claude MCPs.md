@@ -1,5 +1,5 @@
 # LWA Infra -- Claude MCPs
-> Last updated: 2026-06-22
+> Last updated: 2026-07-07
 
 Four MCP servers give Claude structured access to the homelab. Three are in-house FastMCP servers deployed as dedicated services; the fourth (Atlas) is the official upstream Plane MCP server, run as a local subprocess. Together they cover the full operational surface: cluster state, git workflow, monitoring layer, and project management.
 
@@ -10,7 +10,7 @@ Four MCP servers give Claude structured access to the homelab. Three are in-hous
 | **Argus** | watchtower | Live monitoring configs, systemd, journald, Alertmanager API, Prometheus rules | 9800 | Streamable HTTP (FastMCP · systemd) |
 | **Atlas** | apex (local subprocess) | Plane project management — work items, modules, cycles, projects | — (stdio, no listening port) | stdio (official `makeplane/plane-mcp-server` via `uvx`) |
 
-Synapse, Scribe, and Argus follow the same security pattern: dedicated system user, no shell, UFW-restricted to apex (`{{ ip_apex }}` in `ansible/vars/main.yml`, currently `192.168.10.107`), no write surface except where explicitly scoped (Scribe — git only, branch-protected). **Atlas is architecturally different and unscoped — see its section below before assuming the same guardrails apply.**
+Synapse, Scribe, and Argus follow the same security pattern: dedicated system user, no shell, UFW-restricted to apex (`{{ ip_apex }}` in `ansible/vars/main.yml`, currently `192.168.20.2`), no write surface except where explicitly scoped (Scribe — git only, branch-protected). **Atlas is architecturally different and unscoped — see its section below before assuming the same guardrails apply.**
 
 ---
 
@@ -75,7 +75,7 @@ Named for the neural connection — the junction between Claude and the homelab'
 ### Deployment
 
 - **Host:** `monolith.littlewolfacres.com`
-- **Port:** `30800` (UFW restricts to `apex` only, var-driven via `ip_apex` — currently `192.168.10.107`)
+- **Port:** `30800` (UFW restricts to `apex` only, var-driven via `ip_apex` — currently `192.168.20.2`)
 - **Transport:** Streamable HTTP (FastMCP)
 - **Deploy method:** Kubernetes (namespace: `synapse`) — GitHub Actions `deploy-synapse.yml`
 - **Image:** `ghcr.io/speddling/synapse:latest`
@@ -103,7 +103,7 @@ services/synapse/
 
 | Control | Detail |
 |---|---|
-| Network | UFW: port 30800 allowed from `{{ ip_apex }}` (apex) only — currently `192.168.10.107` |
+| Network | UFW: port 30800 allowed from `{{ ip_apex }}` (apex) only — currently `192.168.20.2` |
 | k8s permissions | Custom ClusterRole: read-only get/list/watch + pods/log. No write, no exec, no secrets. |
 | Filesystem | hostPath volumes mounted `readOnly: true`. Path allowlist enforced in `server.py`. |
 | Prometheus | Read-only HTTP queries against Watchtower |
@@ -323,7 +323,7 @@ Query `/api/v1/rules` — returns all alert rules currently loaded by Prometheus
 ### Deployment
 
 - **Host:** `watchtower.littlewolfacres.com`
-- **Port:** `9800` (UFW restricts to `apex` only, var-driven via `ip_apex` — currently `192.168.10.107`)
+- **Port:** `9800` (UFW restricts to `apex` only, var-driven via `ip_apex` — currently `192.168.20.2`)
 - **User:** `argus` (dedicated system user, no shell, no home dir)
 - **Venv:** `/opt/argus/venv`
 - **Script:** `/opt/argus/server.py`
@@ -333,7 +333,7 @@ Query `/api/v1/rules` — returns all alert rules currently loaded by Prometheus
 
 ### Security
 
-- Listens on all interfaces, UFW restricted to `{{ ip_apex }}` (apex) — currently `192.168.10.107`
+- Listens on all interfaces, UFW restricted to `{{ ip_apex }}` (apex) — currently `192.168.20.2`
 - Runs as the `argus` system user — no sudo, no shell
 - Filesystem reads allowlisted in the systemd `Environment=` — not user-supplied at runtime
 - Unit name validation for `systemd_status` and `journald_tail` — regex whitelist, no shell passthrough (`subprocess` list args only)
@@ -425,60 +425,3 @@ A `200` with your user profile confirms the key works — narrows any further co
 | Manage Plane projects | Atlas → `create_project` / `list_projects` |
 
 Synapse never touches git. Scribe never touches the cluster. Argus never writes anything. **Atlas never touches infrastructure — but unlike the other three, it has no internal guardrails, so treat every write call as a real, unguarded action against production project data.**
-
----
-
-## Kiro CLI — Native Alternative
-
-Kiro is an AI coding agent that runs directly in the terminal on apex. Unlike the MCP setup above, it requires no running servers, no config files, and no Claude Desktop — just `kiro` in any repo directory.
-
-```bash
-cd ~/lwa-homelab
-kiro
-```
-
-### What Kiro Does Natively
-
-| Capability | How |
-|---|---|
-| Read and edit files in the repo | Built-in filesystem tools — no Scribe needed |
-| Run shell commands (Ansible, gh, git) | Direct shell execution on apex |
-| SSH into monolith / watchtower | Via apex's existing SSH keys — same access as you |
-| Query AWS APIs | Native `use_aws` tool — no CLI wrapper needed |
-| Search and understand code | AST-aware code intelligence built in |
-| Branch, commit, push, open PRs | Shell + `gh` CLI — same as Scribe, no MCP server required |
-
-### Comparison to the MCP Stack
-
-| Task | MCP approach | Kiro approach |
-|---|---|---|
-| Check k3s pod state | Synapse → `k8s_get_pods` | `ssh monolith kubectl get pods -A` |
-| Query Prometheus | Synapse → `prom_query` | `ssh watchtower curl -s 'localhost:9090/api/v1/query?...'` |
-| Read journald logs | Argus → `journald_tail` | `ssh watchtower journalctl -u <unit> -n 50` |
-| Commit and open PR | Scribe → `git_*` tools | `git` + `gh` CLI directly on apex |
-| Edit homelab files | Claude filesystem MCP | Built-in file tools |
-
-The MCP servers add structured guardrails (branch protection, path allowlists, read-only enforcement) and work inside Claude Desktop's chat interface. Kiro trades those guardrails for flexibility — it can do anything apex can do, and asks before taking destructive actions.
-
-### When to Use Which
-
-- **Claude + MCPs** — conversational, long-running sessions in Claude Desktop where you want the structured tool interface and guardrails
-- **Kiro** — terminal-native work, AWS operations, tasks that need full shell access, or when you don't want to manage MCP server state
-
-### Installation
-
-```bash
-# Install
-npm install -g @aws/kiro-cli   # or via the Kiro installer
-
-# Launch in any repo
-cd ~/lwa-homelab
-kiro
-```
-
-### Notes
-
-- Kiro runs as `speddling` on apex — inherits all SSH keys, `gh` auth, AWS credentials, and Ansible vault access
-- No inbound ports required — Kiro is a local process, not a server
-- Context window usage shown in the TUI (`Auto X%`) — resets each session
-- Sessions can be saved/restored with `/chat save` and `/chat load`
