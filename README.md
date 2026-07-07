@@ -1,4 +1,5 @@
 # LWA Infra
+> Last updated: 2026-07-07
 
 ## Hardware
 
@@ -22,6 +23,8 @@ TP-Link Omada ecosystem, fully managed, SNMP-monitored.
 | EAP225-Outdoor | Outdoor wireless access point |
 
 **WAN:** T-Mobile FAST 5688W and AT&T CGW450, equal-weight load balanced across two independent cellular carriers.
+
+**VLANs:** Mgmt (10), Users (20), and Infra (30) are live and stable. IoT (40) is partial -- the NVR is on it, no WiFi SSID yet. Guest (50) and a blackhole/native VLAN (999) are not yet built. Full detail: `docs/homelab-state.md`.
 
 DNS chain: **AdGuard Home -> Unbound -> root**, recursive, no upstream forwarder dependency.
 Public DNS: **Cloudflare**, authoritative for `littlewolfacres.com`.
