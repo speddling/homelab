@@ -5,7 +5,8 @@
 # All rules are idempotent — safe to re-run at any time.
 #
 # Port inventory:
-#   22    SSH              — apex + studio only
+#   22    SSH              — apex + studio (WiFi + wired dock) always;
+#                              LAN-wide temporarily until final security sweep
 #   6443  k3s API (kubectl) — apex only
 #   80    Traefik HTTP     — LAN (redirects to 443)
 #   443   Traefik HTTPS    — LAN (ArgoCD, Navidrome, future ingress)
@@ -43,12 +44,35 @@
     proto: tcp
     src: "{{ ip_apex }}"
 
-- name: Allow SSH from studio
+- name: Allow SSH from studio (WiFi)
   community.general.ufw:
     rule: allow
     port: "{{ port_ssh }}"
     proto: tcp
     src: "{{ ip_studio }}"
+
+- name: Allow SSH from studio (wired dock, Mgmt out-of-band)
+  community.general.ufw:
+    rule: allow
+    port: "{{ port_ssh }}"
+    proto: tcp
+    src: "{{ ip_studio_dock_mgmt }}"
+
+# TEMPORARY, deliberate: broad SSH access across the whole home network as a
+# safety net while VLAN segmentation is still mid-rollout (currently ~3/4
+# done -- Guest/IoT SSIDs and the blackhole VLAN still pending). Remove this
+# rule as part of the final network security sweep, once every device that
+# needs SSH is confirmed on a known, stable, narrow rule like the ones
+# above. Locking to apex/studio alone too early risks exactly the kind of
+# lockout this rule exists to prevent (see: 2026-07-07 monolith SSH incident,
+# caused by studio's IP changing during the Users VLAN rollout with no
+# broad fallback in place on this host, unlike watchtower).
+- name: Allow SSH from LAN (temporary, until final security sweep)
+  community.general.ufw:
+    rule: allow
+    port: "{{ port_ssh }}"
+    proto: tcp
+    src: "192.168.0.0/16"
 
 - name: Allow k3s API (kubectl) from apex
   community.general.ufw:
