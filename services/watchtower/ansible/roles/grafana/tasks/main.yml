@@ -88,6 +88,7 @@
       - snmp-interfaces.json
       - tmobile-gateway.json
       - reolink-nvr.json
+      - homelab-overview.json
   notify: restart grafana
 
 - name: Download Node Exporter Full dashboard (ID 1860)
@@ -151,6 +152,18 @@
     mode: '0644'
   notify: restart grafana
 
+# Templated (not copy) because this dashboard embeds the NVR admin
+# credential in its camera-snapshot panel URL -- needs Jinja rendering
+# from vault, unlike the other static custom dashboards above.
+- name: Deploy Homelab Overview dashboard (custom)
+  ansible.builtin.template:
+    src: homelab-overview.json.j2
+    dest: /var/lib/grafana/dashboards/homelab-overview.json
+    owner: grafana
+    group: grafana
+    mode: '0644'
+  notify: restart grafana
+
 # Alerting provisioning is intentionally absent — unified alerting is disabled
 # in grafana.ini. Remove any stale alerting provisioning files left from
 # earlier configurations so Grafana doesn't attempt to load them.
@@ -204,7 +217,7 @@
 
       MANAGED_UIDS = {
           'lwa-blackbox-probes', 'lwa-k3s-cluster', 'lwa-reolink-nvr',
-          'lwa-snmp-interfaces', 'lwa-tmobile-gateway',
+          'lwa-snmp-interfaces', 'lwa-tmobile-gateway', 'lwa-homelab-overview',
           '{{ nef_uid }}'
       }
 
@@ -286,6 +299,7 @@
       - lwa-reolink-nvr
       - lwa-snmp-interfaces
       - lwa-tmobile-gateway
+      - lwa-homelab-overview
 
 - name: Delete each unmanaged dashboard (API)
   ansible.builtin.uri:
