@@ -1,63 +1,110 @@
 # LWA Infra -- Current State
-> Last updated: 2026-06-22
+> Last updated: 2026-07-07
 
 ---
 
 ## Network
 
-### Hardware
+### VLAN Status
 
-| Device | IP | Role | Status |
+| VLAN | Name | Subnet | Gateway | Status |
+|---|---|---|---|---|
+| 10 | Mgmt | 192.168.10.0/24 | .10.1 | ✅ Live |
+| 20 | Users | 192.168.20.0/24 | .20.1 | ✅ Live |
+| 30 | Infra | 192.168.30.0/24 | .30.1 | ✅ Live |
+| 40 | IoT | 192.168.40.0/24 | .40.1 | 🟡 Partial -- NVR only, no WiFi SSID yet |
+| 50 | Guest | 192.168.50.0/24 | .50.1 | ❌ Not built |
+| 999 | Pit (blackhole) | none | none | ❌ Not built |
+
+The original plan was a single 60-minute cutover across all 5 VLANs at once. Three attempts at that failed (see `cluster-runbook.md` postmortem references in Plane) and were replaced with the current approach: build and stabilize one VLAN at a time, by hand, verified against a live Omada export before trusting any IP in this doc. Mgmt/Users/Infra have held stable since; IoT/Guest/blackhole are the remaining scope.
+
+**Do not trust static IPs in this file (or any doc) without cross-checking a live Omada DeviceList/OnlineClient export first.** Several IPs drifted silently during the manual rebuild and went undetected for days -- see the 2026-07-03 incident log in Plane.
+
+### Hardware -- Confirmed Current Addresses (2026-07-05 Omada export)
+
+| Device | IP | VLAN | Role |
 |---|---|---|---|
-| T-Mobile FAST 5688W | -- | 5G WAN1 | Online |
-| AT&T CGW450 | -- | 5G WAN2 | Online |
-| ER605 v2.0 | 192.168.0.1 | Multi-WAN VPN Router | Online |
-| OC200 | 192.168.0.7 | Network Controller | Online |
-| SG2218P | -- | Managed PoE+ Switch | Online |
-| CyberPower CP1000PFCLCD | -- | UPS | Online |
-| EAP245 | 192.168.0.2 | Access Point | Online |
-| EAP245 | 192.168.0.5 | Access Point | Online |
+| T-Mobile FAST 5688W | -- (WAN1, no LAN IP) | -- | 5G WAN1 |
+| AT&T CGW450 | -- (WAN2, no LAN IP) | -- | 5G WAN2, direct to ER605 WAN2 port |
+| ER605 v2.0 | 192.168.10.1 | Mgmt (10) | Multi-WAN VPN Router |
+| SG2218P | 192.168.10.102 | Mgmt (10) | Managed PoE+ Switch |
+| OC200 | 192.168.10.3 | Mgmt (10) | Network Controller |
+| EAP245 -- Upstairs Hall | 192.168.10.100 | Mgmt (10) | Wireless AP |
+| EAP245 -- Downstairs Hall | 192.168.10.101 | Mgmt (10) | Wireless AP |
+| apex | 192.168.20.2 | Users (20) | Primary Workstation, WiFi |
+| studio | 192.168.20.3 | Users (20) | DAW / KDE Workstation, WiFi |
+| studio (wired dock) | 192.168.10.7 | Mgmt (10) | Out-of-band emergency access -- occasional/physical, not always-on |
+| monolith | 192.168.30.10 | Infra (30) | k3s Node |
+| watchtower | 192.168.30.11 | Infra (30) | DNS / Monitoring |
+| Big Brother NVR | 192.168.40.10 | IoT (40) | NVR, wired to SG2218P port 7 |
+| Brother HL-L3290CWD printer | 192.168.20.103 | Users (20), temporary | Will move to IoT once its WiFi SSID exists |
+| CyberPower CP1000PFCLCD | -- | -- | UPS |
 
-### Static DHCP Reservations (MAC-bound in ER605)
+> Note the final Mgmt addressing (.10.100-.102 for switch/APs) differs from the original migration plan (.10.2, .10.4, .10.5) -- it settled differently during the manual rebuild. Functionally equivalent, just don't cross-reference the old plan's specific numbers.
 
-| IP | Hostname | Role |
+### Remaining Network Migration Work
+
+Design reference for the parts of the original migration plan not yet built. Kept here (not a separate runbook) since this is now the only place tracking current + pending network state together.
+
+**IoT (40) -- remaining:**
+| Planned IP | Device | Status |
 |---|---|---|
-| 192.168.0.4 | Big Brother | NVR |
-| 192.168.0.7 | OC200 | Network Controller |
-| 192.168.0.19 | apex | Primary Workstation |
-| 192.168.0.20 | monolith | k3s Node |
-| 192.168.0.21 | watchtower | DNS / Monitoring |
-| 192.168.0.109 | studio | DAW / KDE Workstation |
+| .40.11 | Reolink camera #1 (porch) | Not yet installed |
+| .40.12 | Reolink camera #2 (driveway PTZ) | Not yet installed |
+| .40.20 | Brother printer (once IoT SSID exists) | Currently on Users (20) temporarily |
 
-> All other devices use dynamic DHCP leases. Do not set static IPs at the OS level.
+**Guest (50) -- not started.** Pure DHCP, `.50-.200` pool (wider than other VLANs, fewer statics needed). No DNS allow to Infra -- Guest gets `1.1.1.1` / `9.9.9.9` via DHCP directly, bypassing AdGuard entirely (no internal hostname resolution, no AdGuard log noise -- this is intentional split-horizon, not a gap).
+
+**SSID plan (not yet built):**
+| SSID | VLAN | Notes |
+|---|---|---|
+| `LittleWolfAcres-IoT` | 40 | Printer + future IoT WiFi devices |
+| `LittleWolfAcres-Guest` | 50 | Visitor devices, daughter's school Chromebook |
+
+All three APs will broadcast all three SSIDs (`LittleWolfAcres` on Users already does). No Infra SSID -- Infra stays wired-only by design.
+
+**Firewall rules still needed once Guest/IoT exist** (ER605 default: inter-VLAN deny, WAN-outbound allow, WAN-inbound deny):
+- Guest → IoT printer only (TCP 631, 9100; UDP 5353), else WAN-only
+- IoT → WAN only, no allow to any internal VLAN (cameras/NVR intra-VLAN, no rule needed)
+- mDNS/Bonjour printer discovery across VLANs needs the ER605's mDNS Repeater (Settings → Services → mDNS) forwarding Users→IoT and Guest→IoT -- opening UDP 5353 alone does not make multicast discovery cross VLAN boundaries. If discovery fails after configuring the repeater, check the ACL isn't independently blocking the forwarded traffic before assuming the repeater config is wrong. Fallback: static IP printer entry per device, works regardless of mDNS Repeater state.
+
+**Blackhole/Pit (999) -- not started.** Native VLAN on the ER605 trunk uplink; untagged frames dropped. Replaces VLAN 1 as the trunk's default once built.
+
+**Final network security sweep (after all of the above):** both watchtower and monolith currently allow SSH from the entire LAN (`192.168.0.0/16`) as a deliberate temporary safety net during this rebuild. Once Guest/IoT/blackhole are all stable, remove that fallback from both hosts' `ufw` roles and confirm every device needing SSH has a narrow, permanent rule first (apex, studio WiFi, studio wired dock already do on monolith).
+
+**Remote access (deferred, not started):** single entry point via WireGuard on the ER605, one inbound UDP port (51820), no per-service port forwards. Clients land in their own subnet with reach into Users/Infra/IoT. Subnet allocation, client keys, and policy all still TBD.
+
+**Also deferred:** EAP225-Outdoor (balcony AP, needs outdoor-rated cable run + inline surge protector), coop/run Ethernet drop (pulled when power-to-coop project happens), VLAN-aware Linux bridge config on monolith (needed before any VM lands on a non-Infra VLAN).
 
 ### DNS
 
-- **Primary DNS:** Watchtower (`192.168.0.21`) -- AdGuard Home -> Unbound -> Root
-- **Fallback DNS:** `1.1.1.1`
-- **DHCP DNS option:** ER605 pushes `192.168.0.21` to all LAN clients
+- **Primary DNS:** Watchtower (`192.168.30.11`) -- AdGuard Home -> Unbound -> Root
+- **Fallback DNS:** `1.1.1.1` (added as a genuine emergency measure the night of the 2026-07-03 outage, not removed since -- harmless now that both Cloudflare public records and AdGuard agree, but only actually needed if watchtower itself is down)
+- **DHCP DNS option:** ER605 pushes `192.168.30.11` to Mgmt/Users/Infra/IoT VLAN clients
 - **Local domain:** `littlewolfacres.com` -- all hosts resolve as `hostname.littlewolfacres.com`
-- **Short hostname resolution:** AdGuard Home search domain set to `littlewolfacres.com`
-- **Local rewrites managed in AdGuard Home:**
+- **Local rewrites managed in AdGuard Home** (`services/watchtower/ansible/roles/adguard/templates/AdGuardHome.yaml.j2` -- never edit via the AdGuard UI directly, it gets overwritten on next deploy):
 
 | Domain | Resolves To |
 |---|---|
-| `watchtower.littlewolfacres.com` | 192.168.0.21 |
-| `grafana.littlewolfacres.com` | 192.168.0.21 |
-| `monolith.littlewolfacres.com` | 192.168.0.20 |
-| `navidrome.littlewolfacres.com` | 192.168.0.20 |
-| `argocd.littlewolfacres.com` | 192.168.0.20 |
-| `plane.littlewolfacres.com` | 192.168.0.20 |
-| `zombatron.littlewolfacres.com` | 192.168.0.20 |
-| `studio.littlewolfacres.com` | 192.168.0.109 |
-| `apex.littlewolfacres.com` | 192.168.0.19 |
+| `watchtower.littlewolfacres.com` | 192.168.30.11 |
+| `grafana.littlewolfacres.com` | 192.168.30.11 |
+| `monolith.littlewolfacres.com` | 192.168.30.10 |
+| `navidrome.littlewolfacres.com` | 192.168.30.10 |
+| `argocd.littlewolfacres.com` | 192.168.30.10 |
+| `plane.littlewolfacres.com` | 192.168.30.10 |
+| `zombatron.littlewolfacres.com` | 192.168.30.10 |
+| `studio.littlewolfacres.com` | 192.168.20.3 |
+| `apex.littlewolfacres.com` | 192.168.20.2 |
+
+Some hostnames (`plane`, `apex` itself) also have public Cloudflare A records pointing directly at the LAN IP -- needed because apex doesn't reliably use AdGuard as its resolver (see Atlas section in `Claude MCPs.md` for why), and any long-running local process there needs the hostname to resolve at the OS level with no per-call override.
 
 ### SNMP
 
-- Enabled at site level in Omada Controller
-- Community string: `littlewolfacres` (stored in Ansible vault)
-- SNMPv3 user: `prometheus` (stored in Ansible vault)
-- Monitored devices: ER605, 2x EAP245
+- Enabled at site level in Omada Controller (moved from a global-config location in older Omada UI versions -- now under **Site → Network Config → SNMP**)
+- Version: v2c
+- Community string: stored in Ansible vault as `vault_snmp_community` (rotated 2026-07-07 after Omada's complexity policy rejected the old value -- must contain letters, numbers, and symbols, 10-64 chars, no repeated characters back-to-back)
+- SNMPv3 user: `prometheus` (stored in vault)
+- Monitored devices: ER605, SG2218P, both EAP245s -- `snmp_exporter` fully in IaC now (`services/watchtower/ansible/roles/snmp_exporter/`), previously ran unmanaged on watchtower's disk with no role at all
 
 ---
 
@@ -74,7 +121,7 @@
 | OS | Ubuntu Server 24.04.4 LTS |
 | Kernel | 6.8.0-111-generic |
 | Hostname | `watchtower` |
-| IP | 192.168.0.21 (DHCP MAC-bound) |
+| IP | 192.168.30.11 (Infra VLAN) |
 
 ### Role
 
@@ -92,10 +139,13 @@ DNS resolution and infrastructure monitoring.
 | Prometheus | Metrics and alerting | 9090 | ✅ Running |
 | node_exporter | Host metrics | 9100 | ✅ Running |
 | blackbox_exporter | Endpoint probing | 9115 | ✅ Running |
-| snmp_exporter | SNMP metrics | 9116 | ✅ Running |
+| snmp_exporter | SNMP metrics | 9116 | ✅ Running -- now in IaC |
 | adguard_exporter | AdGuard metrics | 9618 | ✅ Running |
+| tmobile_exporter | T-Mobile gateway metrics | 9719 | ✅ Running |
+| reolink_exporter | NVR metrics | 9720 | ✅ Running -- pointed at IoT `.40.10` (was pointed at a dead Mgmt-range IP for days before catching it) |
 | Netdata | Real-time monitoring | 19999 | ✅ Running |
 | Grafana | Dashboards | 3001 | ✅ Running |
+| Scribe MCP | Claude git control plane (runs on apex, not watchtower -- see `Claude MCPs.md`) | -- | -- |
 
 > **AdGuard Home auto-update is disabled** (`disable_updates: true` in `AdGuardHome.yaml`). Version upgrades go through the Ansible role.
 
@@ -120,9 +170,10 @@ DNS resolution and infrastructure monitoring.
 | blackbox | localhost:9115 | ✅ Up |
 | adguard | localhost:9618 | ✅ Up |
 | monolith | monolith:9100 | ✅ Up |
-| snmp-er605 | 192.168.0.1 | ✅ Up |
-| snmp-eap-yarn-studio | 192.168.0.5 | ✅ Up |
-| snmp-eap-foyer | 192.168.0.2 | ✅ Up |
+| snmp-er605 | 192.168.10.1 | ✅ Up |
+| snmp-sg2218p | 192.168.10.102 | ✅ Up |
+| snmp-eap-up | 192.168.10.100 | ✅ Up |
+| snmp-eap-down | 192.168.10.101 | ✅ Up |
 | tmobile | localhost:9719 | ✅ Up |
 | reolink_nvr | localhost:9720 | ✅ Up |
 
@@ -136,36 +187,13 @@ DNS resolution and infrastructure monitoring.
 | SNMP Interfaces | `lwa-snmp-interfaces` | Custom |
 | T-Mobile 5G Gateway | `lwa-tmobile-gateway` | Custom |
 | Reolink NVR | `lwa-reolink-nvr` | Custom |
-
-### Alerting
-
-| Alert | Condition | Scope |
-|---|---|---|
-| MonolithDown | Scrape fails > 1m | monolith |
-| MonolithHighCPU | > 85% sustained 5m | monolith |
-| MonolithHighMemory | > 85% sustained 5m | monolith |
-| MonolithLowDisk | > 80% used on / | monolith |
-| MonolithLowDiskHddC | > 80% used on /mnt/hdd-c | monolith |
-| MonolithLowDiskHddD | > 80% used on /mnt/hdd-d | monolith |
-| WatchtowerHighCPU | > 85% sustained 5m | watchtower |
-| WatchtowerHighMemory | > 85% sustained 5m | watchtower |
-| WatchtowerLowDisk | > 80% used, 10m | watchtower |
-| WatchtowerCriticalDisk | > 90% used, 5m | watchtower |
-| WatchtowerPrometheusDown | Scrape fails > 2m | watchtower |
-| WatchtowerPrometheusTSDB | TSDB blocks > 8 GB | watchtower |
-| WatchtowerNodeExporterDown | Scrape fails > 1m | watchtower |
-| AdGuardHomeDown | Scrape fails > 1m | watchtower |
-| WANDown | ICMP probe to 1.1.1.1 fails > 3m | watchtower |
-| TMobileExporterDown | Scrape fails > 2m | watchtower |
-| TMobile4GSignalWeak | 4G RSRP < -110 dBm, 10m | watchtower |
-| TMobile5GSignalWeak | 5G RSRP < -110 dBm, 10m | watchtower |
-| DeadManSwitch | Always firing -- watchdog confirmation | all |
+| Homelab Overview | `lwa-homelab-overview` | Custom -- single-page at-a-glance: WAN status/traffic (both links), server CPU/RAM/disk, live camera snapshot |
 
 ### UFW Rules
 
 | Port | Protocol | Service | Allowed From |
 |---|---|---|---|
-| 22 | TCP | SSH | apex only |
+| 22 | TCP | SSH | LAN-wide (`192.168.0.0/16`) -- **deliberate temporary safety net during the VLAN rebuild, not an oversight.** Remove at the final network security sweep (see Network section above) once Guest/IoT/blackhole are stable. |
 | 53 | TCP+UDP | AdGuard Home DNS | LAN |
 | 3000 | TCP | AdGuard Home UI | LAN |
 | 3001 | TCP | Grafana | LAN |
@@ -174,6 +202,7 @@ DNS resolution and infrastructure monitoring.
 | 9116 | TCP | snmp_exporter | LAN |
 | 9618 | TCP | adguard_exporter | LAN |
 | 19999 | TCP | Netdata | LAN |
+| 9800 | TCP | Argus MCP server | apex only |
 
 ### IaC
 
@@ -182,7 +211,7 @@ DNS resolution and infrastructure monitoring.
 | State | Terraform Cloud (`littlewolfacres` org, `watchtower` workspace) | app.terraform.io |
 | Config | Ansible | `services/watchtower/ansible/` |
 | Pipeline | GitHub Actions | `.github/workflows/deploy-watchtower.yml` |
-| Runner | Self-hosted, label: `watchtower` | Installed as systemd service |
+| Runner | Self-hosted, label: `watchtower` | Installed as systemd service. Runs as `speddling` currently -- should be `gh-runner` for consistency with monolith, tracked in Plane. |
 
 ---
 
@@ -199,7 +228,7 @@ DNS resolution and infrastructure monitoring.
 | OS | Ubuntu Server 24.04.4 LTS |
 | Kernel | 6.8.0-111-generic |
 | Hostname | `monolith` |
-| IP | 192.168.0.20 (DHCP MAC-bound) |
+| IP | 192.168.30.10 (Infra VLAN) |
 | Storage | 512 GB NVMe -- Samsung PM9A1 -- `/` (150G LVM) |
 | | 500 GB SSD -- Crucial CT500MX500SSD1 -- `/mnt/ssd-a` -- k8s local-path provisioner |
 | | 256 GB SSD -- Crucial CT256M55 -- `/mnt/ssd-b` -- isolated workspace / client jumpbox |
@@ -226,7 +255,7 @@ k3s single-node cluster host. Runs all household and client services.
 | Name | Status | Description |
 |---|---|---|
 | Synapse | ✅ Active | MCP/AI tooling namespace |
-| Obelisk | ✅ Active | Windows 11 VM on `/mnt/ssd-b` -- QEMU/KVM. RDP: `192.168.0.20:33389` |
+| Obelisk | ✅ Active | Windows 11 VM on `/mnt/ssd-b` -- QEMU/KVM. RDP: `192.168.30.10:33389` |
 
 ### Services
 
@@ -239,7 +268,8 @@ k3s single-node cluster host. Runs all household and client services.
 | node_exporter | Host metrics | ✅ Running |
 | Synapse | MCP server | ✅ Running |
 | hdd-d mirror | Nightly rsync hdd-c -> hdd-d via systemd timer at 02:00 | ✅ Running |
-| Obelisk | QEMU/KVM Win11 VM -- RDP `192.168.0.20:33389` | ✅ Running |
+| Obelisk | QEMU/KVM Win11 VM -- RDP `192.168.30.10:33389` | ✅ Running |
+| Plane | Project management -- `plane.littlewolfacres.com` | ✅ Running (via ArgoCD) |
 
 ### Samba Shares
 
@@ -256,13 +286,13 @@ k3s single-node cluster host. Runs all household and client services.
 | State | Terraform Cloud (`littlewolfacres` org, `monolith` workspace) | app.terraform.io |
 | Config | Ansible | `services/monolith/ansible/` |
 | Pipeline | GitHub Actions | `.github/workflows/deploy-monolith.yml` |
-| Runner | Self-hosted, label: `monolith` | Installed as systemd service |
+| Runner | Self-hosted, label: `monolith`, runs as `gh-runner` | Installed as systemd service. Registration was auto-deleted by GitHub after the 2026-07-03 outage (offline too long) and had to be manually re-registered; also found missing its required `monolith` custom label after re-registration, which silently blocked job dispatch even with the runner showing "online." Check both registration validity and labels (`gh api repos/speddling/lwa-infra/actions/runners`) if jobs sit queued despite the runner looking healthy. |
 
 ### UFW Rules
 
 | Port | Protocol | Service | Allowed From |
 |---|---|---|---|
-| 22 | TCP | SSH | apex, studio |
+| 22 | TCP | SSH | apex (192.168.20.2), studio WiFi (192.168.20.3), studio wired dock (192.168.10.7) -- **plus LAN-wide (192.168.0.0/16) temporarily, same deliberate safety net as watchtower.** Remove at the final network security sweep. |
 | 80 | TCP | Traefik HTTP | LAN |
 | 443 | TCP | Traefik HTTPS | LAN |
 | 139 | TCP | Samba (NetBIOS) | LAN |
@@ -276,6 +306,8 @@ k3s single-node cluster host. Runs all household and client services.
 | 30900 | TCP | kube-state-metrics | watchtower |
 | 33389 | TCP | Obelisk RDP (NodePort) | LAN |
 | 39182 | TCP | Obelisk windows_exporter | watchtower |
+
+**Do not add UFW rules manually on Monolith** -- all rules are managed by the `ufw` Ansible role in `services/monolith/ansible/roles/ufw/`. Add rules there and run the **Deploy Monolith Config** workflow.
 
 ---
 
@@ -305,8 +337,11 @@ GitOps controller for k3s. Watches `speddling/lwa-infra` on `master` and reconci
 | navidrome | `services/navidrome/kubernetes/` | navidrome |
 | minecraft | `services/minecraft/kubernetes/` | minecraft |
 | synapse | `services/synapse/kubernetes/` | synapse |
+| plane | Helm chart, `helm.plane.so` | plane |
 | kube-state-metrics | `kubernetes/manifests/` | kube-system |
 | cert-manager | `kubernetes/cluster/cert-manager/` | cert-manager |
+| apps | `kubernetes/apps/` | -- (apps-of-apps) |
+| argocd-cluster-config | `kubernetes/cluster/argocd/` | argocd |
 
 ### Prometheus Targets
 
@@ -345,6 +380,10 @@ GitOps controller for k3s. Watches `speddling/lwa-infra` on `master` and reconci
 | Bootstrap workflow | `.github/workflows/bootstrap-argocd.yml` |
 | Rotation workflow | `.github/workflows/rotate-argocd-credentials.yml` |
 | Rotation playbook | `services/monolith/ansible/playbooks/argocd-credentials.yml` |
+
+### Known Gotcha -- `copyutil` Init Container Crash-Loop
+
+`argocd-repo-server`'s `copyutil` init container (copies the ArgoCD binary into a shared `emptyDir` for the other containers) can get stuck crash-looping with a `file exists` error if it's interrupted mid-copy -- e.g. by a power outage. The `emptyDir` survives container restarts within the same pod, so a retry collides with its own leftover file from the interrupted first attempt. Fix: delete the pod (`kubectl delete pod -n argocd <repo-server-pod>`), the Deployment recreates it with a fresh empty volume. Hit this after the 2026-07-03 outage; repo-server sat at `0/1` ready for days undetected since `argocd-application-controller` itself still showed `Running 1/1`.
 
 ---
 
@@ -390,7 +429,7 @@ Automatic TLS via Cloudflare DNS-01. Issues and renews Let's Encrypt certificate
 | Detail | Value |
 |---|---|
 | Hostname | `apex` |
-| IP | 192.168.0.19 (DHCP MAC-bound) |
+| IP | 192.168.20.2 (Users VLAN, WiFi) |
 
 | Service | Port | Status |
 |---|---|---|
@@ -404,7 +443,8 @@ Automatic TLS via Cloudflare DNS-01. Issues and renews Let's Encrypt certificate
 | Detail | Value |
 |---|---|
 | Hostname | `studio` |
-| IP | 192.168.0.109 (DHCP MAC-bound) |
+| IP (WiFi, primary) | 192.168.20.3 (Users VLAN) |
+| IP (wired dock) | 192.168.10.7 (Mgmt VLAN) -- deliberately Mgmt, not Users: out-of-band emergency access to OC200/ER605/switch when the network itself is degraded, so it doesn't depend on Users VLAN being healthy. Occasional/physical use, not always-on. |
 
 | Mount | Source |
 |---|---|

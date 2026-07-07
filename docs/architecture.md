@@ -1,5 +1,5 @@
 # LWA Infra -- Architecture Overview
-> Last updated: 2026-06-22
+> Last updated: 2026-07-07
 
 ---
 
@@ -12,28 +12,32 @@ Internet
     │
     └── AT&T CGW450 (5G WAN2, separate cellular network — installed and running)
             │
-            │   (both WAN1 and WAN2 terminate here — dual-WAN failover/load-balance.
-            │    Final tuning + SNMP monitoring for WAN2 deferred until after VLAN cutover)
+            │   (both WAN1 and WAN2 terminate here — dual-WAN load-balanced.
+            │    WAN2 monitored via SNMP on the ER605 itself — ifIndex 1026 = AT&T/WAN2,
+            │    1027 = T-Mobile/WAN1, no separate exporter needed for either)
             ▼
-        ER605 v2 (192.168.0.1)
+        ER605 v2 (192.168.10.1 — Mgmt VLAN)
         Multi-WAN VPN Router
             │
-        SG2218P (managed PoE+ switch — installed, OC200 adoption/config in progress)
+        SG2218P (192.168.10.102 — managed PoE+ switch)
             │
     ┌───────┼───────────────────────────┐
     │       │                           │
 EAP245   EAP245                    Wired LAN
-(Foyer)  (Yarn Studio)
+(Upstairs (Downstairs
+ Hall)     Hall)
                     ┌───────────────────┼───────────────────┐
                     │                   │                   │
-              apex (.19)         monolith (.20)      watchtower (.21)
+              apex (.20.2)       monolith (.30.10)   watchtower (.30.11)
          MacBook Air M4        AMD Ryzen 7 5700G     Asus VM40B
          16GB unified          64GB DDR4             8GB DDR3
-         Primary WS            k3s node              DNS + Monitoring
+         Users VLAN, WiFi      k3s node, Infra       DNS + Monitoring, Infra
 
-                                                  studio (.109)
+                                                  studio (.20.3 WiFi / .10.7 wired dock)
                                              Dell Precision 5560
-                                             DAW / KDE workstation
+                                             DAW / KDE workstation, Users VLAN
+
+            Big Brother NVR (.40.10, IoT VLAN, wired to SG2218P port 7)
 ```
 
 > TL-SG1210P (the old unmanaged switch) is decommissioned — disconnected, sitting in the spare-parts pile, not part of the live topology above.
@@ -65,7 +69,7 @@ apex (author)
 ## Monolith — k3s Cluster
 
 ```
-monolith (192.168.0.20)
+monolith (192.168.30.10)
 │
 ├── Traefik (ingress, TLS termination)
 │       ├── argocd.littlewolfacres.com   → ArgoCD
@@ -74,7 +78,7 @@ monolith (192.168.0.20)
 ├── cert-manager (Let's Encrypt via Cloudflare DNS-01)
 │
 ├── ArgoCD (GitOps controller)
-│       Manages: navidrome · minecraft · synapse · cert-manager · kube-state-metrics
+│       Manages: navidrome · minecraft · synapse · plane · cert-manager · kube-state-metrics
 │
 ├── KubeVirt + CDI (bootstrapped, not yet used — Obelisk still runs as a bare QEMU/KVM process below, not a KubeVirt VirtualMachine)
 │
@@ -107,7 +111,7 @@ monolith (192.168.0.20)
 ## Watchtower — DNS + Monitoring Stack
 
 ```
-watchtower (192.168.0.21)
+watchtower (192.168.30.11)
 │
 ├── DNS
 │       AdGuard Home (:53, :3000)
@@ -116,7 +120,7 @@ watchtower (192.168.0.21)
 └── Monitoring
         Prometheus (:9090)
             ├── scrapes: watchtower · monolith · argocd-app-controller · argocd-server · kube-state-metrics
-            ├── scrapes: snmp_exporter (ER605, EAP245×2)
+            ├── scrapes: snmp_exporter (ER605, SG2218P, EAP245×2)
             ├── scrapes: blackbox_exporter (HTTP/ICMP probes)
             ├── scrapes: adguard_exporter · tmobile_exporter · reolink_exporter
             ├── scrapes: loki · promtail
