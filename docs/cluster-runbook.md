@@ -1,6 +1,6 @@
 # LWA Infra -- Cluster Runbook
 > Operational reference for k3s, ArgoCD, cert-manager, DNS, Ansible, Terraform, and supporting services.
-> Last updated: 2026-06-22
+> Last updated: 2026-07-09
 
 ---
 
@@ -215,7 +215,7 @@ sudo chmod 600 /etc/samba/studio-music-creds
 sudo mkdir /music-library
 
 # 4. Add to /etc/fstab
-echo '//192.168.0.20/music-library  /music-library  cifs  credentials=/etc/samba/studio-music-creds,uid=1000,gid=1000,file_mode=0664,dir_mode=0775,vers=3.0,_netdev,x-systemd.automount  0  0' \
+echo '//192.168.30.10/music-library  /music-library  cifs  credentials=/etc/samba/studio-music-creds,uid=1000,gid=1000,file_mode=0664,dir_mode=0775,vers=3.0,_netdev,x-systemd.automount  0  0' \
   | sudo tee -a /etc/fstab
 
 # 5. Mount now without rebooting
@@ -389,8 +389,8 @@ journalctl -fu snmp_exporter
 
 ```bash
 # Test from apex against watchtower
-dig @192.168.0.21 monolith.littlewolfacres.com
-dig @192.168.0.21 argocd.littlewolfacres.com
+dig @192.168.30.11 monolith.littlewolfacres.com
+dig @192.168.30.11 argocd.littlewolfacres.com
 
 # Test Unbound directly (run on watchtower)
 dig @127.0.0.1 -p 5335 google.com
@@ -423,7 +423,7 @@ port-forward exists for them, and none should be added. The process above still
 applies, with one important difference in step 2:
 
 **The Cloudflare A record value is the internal LAN IP itself (e.g.
-`192.168.0.20`), not the WAN IP.** There's no port-forward path for an external
+`192.168.30.10`), not the WAN IP.** There's no port-forward path for an external
 request to traverse, so pointing at the WAN IP would resolve to an address that
 goes nowhere useful for this hostname. Pointing directly at the LAN IP means the
 public record only ever resolves to something reachable for clients actually on
@@ -438,7 +438,7 @@ AdGuard, not just external ones.
 **Why a Cloudflare record is needed at all, when AdGuard already rewrites the
 same hostname for LAN clients:** not every device on the LAN actually uses
 AdGuard as its resolver. apex is the known case — it resolves via macOS's
-default system resolver rather than the DHCP-assigned `192.168.0.21`, so
+default system resolver rather than the DHCP-assigned `192.168.30.11`, so
 `plane.littlewolfacres.com` didn't resolve there at all until a public record
 was added. This matters most for any long-running local process on apex (e.g.
 the Atlas/Plane MCP server — see `docs/Claude MCPs.md`) that can't override DNS
@@ -459,13 +459,13 @@ port-forwarded — Firefox resolves to an address it can't reach.
 - Fix: `about:preferences#privacy` → "DNS over HTTPS" → **Off**, fully restart
   Firefox, clear the cache on `about:networking#dns`.
 - Verify: `about:networking#dns` should resolve `*.littlewolfacres.com` to
-  `192.168.0.20`.
+  `192.168.30.10`.
 
 **2. macOS "Local Network" permission (Sonoma+).** Even when DNS resolves
-correctly to `192.168.0.20`, macOS requires per-app permission to connect to
+correctly to `192.168.30.10`, macOS requires per-app permission to connect to
 devices on the local network — separate from internet access entirely. Without it,
 a browser resolves the hostname fine but the TCP connection silently fails, even
-for a raw `http://192.168.0.20:<port>` with no hostname or TLS involved.
+for a raw `http://192.168.30.10:<port>` with no hostname or TLS involved.
 - Fix: **System Settings → Privacy & Security → Local Network** → enable the
   toggle for the affected browser, then fully quit and relaunch it.
 - This is the one to check first if DNS already looks correct and the failure is
@@ -476,10 +476,10 @@ for a raw `http://192.168.0.20:<port>` with no hostname or TLS involved.
 ## SNMP Testing (run on watchtower)
 
 ```bash
-snmpwalk -v2c -c littlewolfacres 192.168.0.1 1.3.6.1.2.1.1.1.0
-snmpwalk -v2c -c littlewolfacres 192.168.0.5 1.3.6.1.2.1.1.1.0
-snmpwalk -v2c -c littlewolfacres 192.168.0.2 1.3.6.1.2.1.1.1.0
-curl "http://localhost:9116/snmp?module=if_mib&auth=littlewolfacres_v2&target=192.168.0.1"
+snmpwalk -v2c -c littlewolfacres 192.168.10.1 1.3.6.1.2.1.1.1.0    # ER605
+snmpwalk -v2c -c littlewolfacres 192.168.10.102 1.3.6.1.2.1.1.1.0  # SG2218P
+snmpwalk -v2c -c littlewolfacres 192.168.10.100 1.3.6.1.2.1.1.1.0  # EAP245 Upstairs Hall
+curl "http://localhost:9116/snmp?module=if_mib&auth=littlewolfacres_v2&target=192.168.10.1"
 ```
 
 ---
@@ -492,10 +492,10 @@ promtool check config /etc/prometheus/prometheus.yml
 promtool check rules /etc/prometheus/alert_rules.yml
 
 # Check active alerts
-curl -s http://192.168.0.21:9090/api/v1/alerts | grep -o '"alertname":"[^"]*"'
+curl -s http://192.168.30.11:9090/api/v1/alerts | grep -o '"alertname":"[^"]*"'
 
 # Check all targets and health
-curl -s http://192.168.0.21:9090/api/v1/targets | python3 -m json.tool | grep -E "job|health"
+curl -s http://192.168.30.11:9090/api/v1/targets | python3 -m json.tool | grep -E "job|health"
 
 # Check storage size
 du -sh /var/lib/prometheus
@@ -509,8 +509,8 @@ sudo systemctl restart prometheus
 ## Alertmanager
 
 ```bash
-curl -s http://192.168.0.21:9093/-/healthy
-curl -s http://192.168.0.21:9093/api/v2/alerts
+curl -s http://192.168.30.11:9093/-/healthy
+curl -s http://192.168.30.11:9093/api/v2/alerts
 sudo systemctl restart alertmanager
 ```
 
@@ -622,7 +622,7 @@ df -h | grep mnt
 ```bash
 # List provisioned alert rules
 curl -s -u 'admin:PASSWORD' \
-  'http://192.168.0.21:3001/api/v1/provisioning/alert-rules' | python3 -m json.tool
+  'http://192.168.30.11:3001/api/v1/provisioning/alert-rules' | python3 -m json.tool
 ```
 
 **Do not import dashboards via the Grafana UI** — the monitoring playbook purges any

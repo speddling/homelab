@@ -1,15 +1,15 @@
 # LWA Infra -- Monitoring Runbook
-> Last updated: 2026-06-16
+> Last updated: 2026-07-09
 
 ---
 
 ## Architecture Overview
 
-All monitoring services run as **systemd units on Watchtower** (`192.168.0.21`).
+All monitoring services run as **systemd units on Watchtower** (`192.168.30.11`).
 There are no monitoring pods in k3s — Prometheus scrapes Monolith's node_exporter remotely over the LAN.
 
 ```
-Watchtower (192.168.0.21)
+Watchtower (192.168.30.11)
 ├── prometheus          :9090   — metrics store & alert evaluation
 ├── alertmanager        :9093   — alert routing → Slack #sentinel + healthchecks.io watchdog
 ├── loki                :3100   — log aggregation, 60d retention, filesystem storage
@@ -23,7 +23,7 @@ Watchtower (192.168.0.21)
 ├── reolink_exporter    :9720   — NVR camera status
 └── daily-summary       timer   — 8 AM + 8 PM Slack digest
 
-Monolith (192.168.0.20 / monolith.littlewolfacres.com)
+Monolith (192.168.30.10 / monolith.littlewolfacres.com)
 ├── node_exporter             :9100   — Monolith host metrics (scraped remotely)
 ├── kube-state-metrics        :30900  — k3s object state metrics (NodePort)
 ├── argocd-application-controller :30885 — ArgoCD reconciliation metrics (NodePort)
@@ -49,7 +49,7 @@ Monolith (192.168.0.20 / monolith.littlewolfacres.com)
 | `blackbox-icmp` | Probes via `localhost:9115` | `probe_success`, `probe_duration_seconds` for ICMP targets |
 | `adguard` | `localhost:9618` | DNS query counts, block rates |
 | `monolith` | `monolith.littlewolfacres.com:9100` → labelled `instance=monolith` | Host CPU, memory, disk, network |
-| `snmp-er605` | `192.168.0.1` via SNMP exporter | Router interface stats (ifHCInOctets, ifOperStatus, etc.) |
+| `snmp-er605` | `192.168.10.1` via SNMP exporter | Router interface stats (ifHCInOctets, ifOperStatus, etc.) |
 | `snmp-eap-up` | Upstairs Hall EAP245, via SNMP exporter | AP interface stats |
 | `snmp-eap-down` | Downstairs Hall EAP245, via SNMP exporter | AP interface stats |
 | `snmp-sg2218p` | SG2218P switch, via SNMP exporter | Switch interface stats |
@@ -81,8 +81,8 @@ in `roles/prometheus/templates/prometheus.yml.j2` under those jobs, then re-depl
 |--------|--------|---------------|
 | `http://grafana.littlewolfacres.com:3001` | http_2xx | Grafana UI reachable |
 | `http://navidrome.littlewolfacres.com` | http_2xx | Navidrome reachable |
-| `192.168.0.20` | icmp | Monolith host pingable |
-| `192.168.0.21` | icmp | Watchtower self-check |
+| `192.168.30.10` | icmp | Monolith host pingable |
+| `192.168.30.11` | icmp | Watchtower self-check |
 | `1.1.1.1` | icmp | WAN/internet connectivity — also the basis for the `WANDown` alert |
 
 ---
@@ -90,7 +90,7 @@ in `roles/prometheus/templates/prometheus.yml.j2` under those jobs, then re-depl
 ## Grafana Dashboards
 
 Grafana runs on port `3001`. Access via `http://grafana.littlewolfacres.com:3001`
-or directly at `http://192.168.0.21:3001`.
+or directly at `http://192.168.30.11:3001`.
 
 Dashboards are **provisioned from disk** — JSON files placed by Ansible into
 `/var/lib/grafana/dashboards/`. They survive Grafana restarts and re-deploys.
@@ -248,11 +248,11 @@ you independently of Slack, WAN state, or whether Watchtower is reachable at all
 
 ```bash
 # Confirm the watchdog route is live in the running config
-curl -s http://192.168.0.21:9093/api/v2/status | python3 -m json.tool | grep -A5 watchdog
+curl -s http://192.168.30.11:9093/api/v2/status | python3 -m json.tool | grep -A5 watchdog
 
 # Check Alertmanager's live routing tree (should show a child route
 # matching alertname="DeadManSwitch" → receiver: watchdog)
-curl -s http://192.168.0.21:9093/api/v2/status
+curl -s http://192.168.30.11:9093/api/v2/status
 ```
 
 Separately, `vault_healthchecks_daily_summary_url` is a **different** healthchecks.io
@@ -263,10 +263,10 @@ independent vault variables, do not conflate them.
 
 ```bash
 # Check health
-curl -s http://192.168.0.21:9093/-/healthy
+curl -s http://192.168.30.11:9093/-/healthy
 
 # Check active alerts via API
-curl -s http://192.168.0.21:9093/api/v2/alerts | python3 -m json.tool
+curl -s http://192.168.30.11:9093/api/v2/alerts | python3 -m json.tool
 
 # Restart
 sudo systemctl restart alertmanager
@@ -292,7 +292,7 @@ provide an event timeline that correlates with the metric graphs in Grafana.
     `daily-summary` runs, `alertmanager`/`prometheus` events, etc.)
   - A syslog listener on UDP/TCP `1514` for the ER605 — **not yet wired up**. The ER605
     needs to be manually configured (System → Logs → Remote Syslog →
-    `192.168.0.21:1514`) before any `{job="er605-syslog"}` data appears. This was
+    `192.168.30.11:1514`) before any `{job="er605-syslog"}` data appears. This was
     deferred to land alongside the AT&T Internet Air WAN2 work.
 
 ### Service health checks
@@ -308,10 +308,10 @@ journalctl -fu promtail
 
 ```bash
 # Confirm both are healthy Prometheus scrape targets
-curl -s 'http://192.168.0.21:9090/api/v1/query?query=up%7Bjob%3D~%22loki%7Cpromtail%22%7D' | python3 -m json.tool
+curl -s 'http://192.168.30.11:9090/api/v1/query?query=up%7Bjob%3D~%22loki%7Cpromtail%22%7D' | python3 -m json.tool
 
 # Query Loki directly via its HTTP API
-curl -s 'http://192.168.0.21:3100/loki/api/v1/query?query={job="watchtower-journal"}' | python3 -m json.tool
+curl -s 'http://192.168.30.11:3100/loki/api/v1/query?query={job="watchtower-journal"}' | python3 -m json.tool
 ```
 
 Or use Grafana Explore with the Loki datasource — see **Grafana Dashboards → Querying
@@ -525,8 +525,8 @@ structure from the NVR. Common causes:
 
 ```bash
 # Test the API directly from watchtower
-curl "http://192.168.0.4/api.cgi?cmd=GetChannelstatus&user=admin&password=PASSWORD"
-curl "http://192.168.0.4/api.cgi?cmd=GetHddInfo&user=admin&password=PASSWORD"
+curl "http://192.168.40.10/api.cgi?cmd=GetChannelstatus&user=admin&password=PASSWORD"
+curl "http://192.168.40.10/api.cgi?cmd=GetHddInfo&user=admin&password=PASSWORD"
 ```
 
 ---
@@ -549,7 +549,7 @@ sudo k3s kubectl get pods -n kube-system | grep kube-state-metrics
 curl http://monolith.littlewolfacres.com:30900/metrics | head -20
 
 # Verify Prometheus picks it up
-curl -s 'http://192.168.0.21:9090/api/v1/query?query=kube_pod_info' | python3 -m json.tool
+curl -s 'http://192.168.30.11:9090/api/v1/query?query=kube_pod_info' | python3 -m json.tool
 ```
 
 The service uses NodePort `30900` (port `30800` is reserved for synapse-mcp).
@@ -564,10 +564,10 @@ since Prometheus runs external to k3s and can't use in-cluster service discovery
 
 ```bash
 # Check both targets are healthy
-curl -s http://192.168.0.21:9090/api/v1/targets | python3 -m json.tool | grep -A10 argocd
+curl -s http://192.168.30.11:9090/api/v1/targets | python3 -m json.tool | grep -A10 argocd
 
 # Query reconciliation/sync status directly
-curl -s 'http://192.168.0.21:9090/api/v1/query?query=argocd_app_info' | python3 -m json.tool
+curl -s 'http://192.168.30.11:9090/api/v1/query?query=argocd_app_info' | python3 -m json.tool
 ```
 
 See the **Active Prometheus alert rules** table above for the five ArgoCD alerts
@@ -608,13 +608,13 @@ promtool check config /etc/prometheus/prometheus.yml
 promtool check rules /etc/prometheus/alert_rules.yml
 
 # Check all scrape targets and their health
-curl -s http://192.168.0.21:9090/api/v1/targets | python3 -m json.tool | grep -E '"job"|"health"|"instance"'
+curl -s http://192.168.30.11:9090/api/v1/targets | python3 -m json.tool | grep -E '"job"|"health"|"instance"'
 
 # Check which jobs are currently UP
-curl -s 'http://192.168.0.21:9090/api/v1/query?query=up' | python3 -m json.tool
+curl -s 'http://192.168.30.11:9090/api/v1/query?query=up' | python3 -m json.tool
 
 # Check active alerts
-curl -s http://192.168.0.21:9090/api/v1/alerts | python3 -m json.tool
+curl -s http://192.168.30.11:9090/api/v1/alerts | python3 -m json.tool
 
 # Check storage size (retention limit: 10GB)
 du -sh /var/lib/prometheus
@@ -630,7 +630,7 @@ sudo systemctl restart prometheus
 
 ## Ansible Deployment
 
-All monitoring config is managed by Ansible, run from **Apex** (`192.168.0.19`).
+All monitoring config is managed by Ansible, run from **Apex** (`192.168.20.2`).
 
 ```bash
 cd ~/lwa-homelab/services/watchtower/ansible
@@ -673,7 +673,7 @@ Config → Run workflow) instead of waiting on an automatic trigger.
 
 1. **Check Prometheus is up and scraping:**
    ```bash
-   curl -s 'http://192.168.0.21:9090/api/v1/query?query=up' | python3 -m json.tool
+   curl -s 'http://192.168.30.11:9090/api/v1/query?query=up' | python3 -m json.tool
    ```
    All expected jobs should show `value: 1`.
 
@@ -717,7 +717,7 @@ grep -A5 'blackbox-http\|blackbox-icmp' /etc/prometheus/prometheus.yml
 curl "http://localhost:9115/probe?module=icmp&target=1.1.1.1"
 
 # Check probe_success in Prometheus
-curl -s 'http://192.168.0.21:9090/api/v1/query?query=probe_success' | python3 -m json.tool
+curl -s 'http://192.168.30.11:9090/api/v1/query?query=probe_success' | python3 -m json.tool
 ```
 
 ### k3s dashboard still showing No Data after kube-state-metrics deployed
@@ -730,7 +730,7 @@ sudo k3s kubectl get pods -n kube-system | grep kube-state
 curl http://monolith.littlewolfacres.com:30900/metrics | grep kube_pod_info | head -5
 
 # Check Prometheus target health
-curl -s http://192.168.0.21:9090/api/v1/targets | python3 -m json.tool | grep -A10 kube-state
+curl -s http://192.168.30.11:9090/api/v1/targets | python3 -m json.tool | grep -A10 kube-state
 ```
 
 ### Reolink channel/HDD metrics missing
@@ -741,15 +741,15 @@ journalctl -u reolink_exporter -n 100
 
 # Test the NVR API directly
 NVR_PW=$(sudo systemctl show reolink_exporter | grep NVR_PASSWORD | cut -d= -f2)
-curl "http://192.168.0.4/api.cgi?cmd=GetChannelstatus&user=admin&password=$NVR_PW"
-curl "http://192.168.0.4/api.cgi?cmd=GetHddInfo&user=admin&password=$NVR_PW"
+curl "http://192.168.40.10/api.cgi?cmd=GetChannelstatus&user=admin&password=$NVR_PW"
+curl "http://192.168.40.10/api.cgi?cmd=GetHddInfo&user=admin&password=$NVR_PW"
 ```
 
 ### Prometheus alert not firing when expected
 
 ```bash
 # Manually evaluate the expression in Prometheus UI
-# http://192.168.0.21:9090/graph — paste the expr from alert_rules.yml
+# http://192.168.30.11:9090/graph — paste the expr from alert_rules.yml
 
 # Validate alert rules syntax
 promtool check rules /etc/prometheus/alert_rules.yml
@@ -758,8 +758,8 @@ promtool check rules /etc/prometheus/alert_rules.yml
 ### Alert firing but no Slack message
 
 ```bash
-curl -s http://192.168.0.21:9093/api/v2/alerts | python3 -m json.tool
-curl -s http://192.168.0.21:9093/api/v2/status | python3 -m json.tool
+curl -s http://192.168.30.11:9093/api/v2/alerts | python3 -m json.tool
+curl -s http://192.168.30.11:9093/api/v2/status | python3 -m json.tool
 journalctl -fu alertmanager -n 100
 ```
 
@@ -773,7 +773,7 @@ systemctl status <service> | grep Active
 # Check Alertmanager's LIVE config against the repo template —
 # confirms whether the new config actually loaded, not just whether
 # the file on disk looks right
-curl -s http://192.168.0.21:9093/api/v2/status | python3 -m json.tool
+curl -s http://192.168.30.11:9093/api/v2/status | python3 -m json.tool
 ```
 Then check whether an earlier role in the `monitoring.yml` role list failed — see
 **Ansible Deployment → Order matters more than it looks** above.
@@ -786,7 +786,7 @@ Then check whether an earlier role in the `monitoring.yml` role list failed — 
 ansible-vault view ansible/vars/vault.yml | grep watchdog
 
 # Confirm the route exists in Alertmanager's LIVE config
-curl -s http://192.168.0.21:9093/api/v2/status | python3 -m json.tool | grep -A10 watchdog
+curl -s http://192.168.30.11:9093/api/v2/status | python3 -m json.tool | grep -A10 watchdog
 ```
 If the var is missing from vault, the `Deploy alertmanager config` task fails on an
 undefined-variable error at render time — same halting behavior described above, just
