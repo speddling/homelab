@@ -1,5 +1,5 @@
 # LWA Infra -- Minecraft Bedrock Server
-> Last updated: 2026-05-26
+> Last updated: 2026-07-09
 
 ## Overview
 
@@ -33,7 +33,7 @@ Server address: `zombatron.littlewolfacres.com:30132`
 | Internal port | 19132 |
 | NodePort | 30132 |
 | Service type | NodePort (LoadBalancer is broken for UDP in k3s) |
-| LAN DNS | `zombatron.littlewolfacres.com` → 192.168.0.20 (AdGuard rewrite) |
+| LAN DNS | `zombatron.littlewolfacres.com` → 192.168.30.10 (AdGuard rewrite) |
 | Public DNS | `zombatron.littlewolfacres.com` → WAN IP (Cloudflare A record, DNS only) |
 | Client connection | `zombatron.littlewolfacres.com` port `30132` |
 
@@ -49,7 +49,7 @@ lwa-homelab/
 ├── services/
 │   └── minecraft/
 │       ├── ansible/
-│       │   ├── inventory.ini              ← monolith: 192.168.0.20
+│       │   ├── inventory.ini              ← monolith: 192.168.30.10
 │       │   └── playbooks/
 │       │       └── import-world.yml       ← stages .mcworld on Monolith (manual path)
 │       ├── kubernetes/

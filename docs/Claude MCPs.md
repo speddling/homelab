@@ -385,7 +385,7 @@ Fixed via a public Cloudflare A record pointing directly at the internal LAN IP 
 
 ```bash
 # From apex — confirms the API key and base URL are valid before touching the MCP config at all
-curl -s --resolve plane.littlewolfacres.com:443:192.168.0.20 \
+curl -s --resolve plane.littlewolfacres.com:443:192.168.30.10 \
   -H "x-api-key: YOUR_KEY" \
   "https://plane.littlewolfacres.com/api/v1/users/me/" | python3 -m json.tool
 ```

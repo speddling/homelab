@@ -1,5 +1,5 @@
 # LWA Infra -- Ubuntu Server Post-Install Runbook
-> Last updated: 2026-05-20
+> Last updated: 2026-07-09
 
 ---
 
@@ -176,10 +176,10 @@ sudo ufw default deny incoming
 sudo ufw default allow outgoing
 
 # Allow SSH — restrict to apex IP if this is a homelab-only node
-sudo ufw allow from 192.168.0.19 to any port 22 proto tcp
+sudo ufw allow from 192.168.20.2 to any port 22 proto tcp
 
-# If SSH from studio is also needed
-sudo ufw allow from 192.168.0.109 to any port 22 proto tcp
+# If SSH from studio is also needed (WiFi; add 192.168.10.7 too for its wired dock)
+sudo ufw allow from 192.168.20.3 to any port 22 proto tcp
 
 # Enable — you will be asked to confirm
 sudo ufw enable

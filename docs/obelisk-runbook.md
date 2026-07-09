@@ -1,10 +1,10 @@
 # LWA Infra -- Obelisk Runbook
-> Last updated: 2026-05-29
+> Last updated: 2026-07-09
 
-**Host:** monolith (`192.168.0.20`)
+**Host:** monolith (`192.168.30.10`)
 **Guest:** Windows 11 Pro (Build 26200)
-**RDP:** `192.168.0.20:33389`
-**VNC:** `192.168.0.20:5900` (install/recovery only)
+**RDP:** `192.168.30.10:33389`
+**VNC:** `192.168.30.10:5900` (install/recovery only)
 **Accounts:** `speddling` (admin), `obelisk` (admin)
 
 ---
@@ -134,7 +134,7 @@ netsh advfirewall firewall add rule name="RDP" protocol=TCP dir=in localport=338
 - [ ] windows_exporter install (port 9182 — Prometheus scrape target)
 - [ ] Firewall rule for windows_exporter (9182)
 - [ ] Prometheus scrape config on watchtower for obelisk
-- [ ] AdGuard rewrite: `obelisk.littlewolfacres.com` → `192.168.0.20:33389`
+- [ ] AdGuard rewrite: `obelisk.littlewolfacres.com` → `192.168.30.10:33389`
 - [ ] UFW rule on monolith: tighten 5900 (VNC) to LAN only, close after install confirmed stable
 - [ ] Second Windows instance on remaining ~100G of ssd-b
 - [ ] Fix autounattend boot detection for future reinstalls (UEFI shell bypass issue)
@@ -148,10 +148,10 @@ netsh advfirewall firewall add rule name="RDP" protocol=TCP dir=in localport=338
 
 ```bash
 # RDP (daily use)
-open rdp://192.168.0.20:33389
+open rdp://192.168.30.10:33389
 
 # VNC (recovery / install observation only)
-open vnc://192.168.0.20:5900
+open vnc://192.168.30.10:5900
 
 # Stop VM
 sudo kill $(sudo cat /tmp/obelisk.pid)
