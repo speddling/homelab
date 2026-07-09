@@ -5,12 +5,21 @@
 # (argocd-application-controller-network-policy) which allows ingress on
 # port 8082 from pods only (namespaceSelector with empty labels = any pod
 # in any namespace). External traffic from non-pod IPs — including Prometheus
-# on Watchtower (192.168.0.21) scraping via NodePort — is blocked.
+# on Watchtower (192.168.30.11) scraping via NodePort — is blocked.
 #
 # In Kubernetes, multiple NetworkPolicies targeting the same pod are unioned.
-# This policy adds an ipBlock rule for the LAN alongside ArgoCD's existing
-# policy, allowing Prometheus to reach port 8082 externally without modifying
-# ArgoCD's own managed NetworkPolicy (which would be reset on sync).
+# This policy adds an ipBlock rule for the Infra VLAN alongside ArgoCD's
+# existing policy, allowing Prometheus to reach port 8082 externally without
+# modifying ArgoCD's own managed NetworkPolicy (which would be reset on sync).
+#
+# CIDR is 192.168.30.0/24 (Infra VLAN) — covers both Watchtower (.11), the
+# actual scrape source, and Monolith (.10), in case kube-proxy's default
+# externalTrafficPolicy: Cluster SNATs the source IP to the node before it
+# reaches the pod. Previously 192.168.0.0/24, from before the VLAN migration
+# (see ansible/vars/main.yml); that migration moved Watchtower and Monolith
+# onto 192.168.30.0/24 and this policy wasn't updated to match, which is why
+# ArgoCDControllerDown started firing on 2026-07-05 — the controller itself
+# was never down, Prometheus's scrape of it just got dropped at this policy.
 #
 # Managed by: ArgoCD argocd-cluster-config Application
 # Watches: kubernetes/cluster/argocd/
@@ -33,7 +42,7 @@ spec:
   ingress:
     - from:
         - ipBlock:
-            cidr: 192.168.0.0/24
+            cidr: 192.168.30.0/24
       ports:
         - protocol: TCP
           port: 8082
