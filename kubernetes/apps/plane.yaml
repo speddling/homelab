@@ -157,3 +157,23 @@ spec:
       namespace: plane
       jsonPointers:
         - /data/WEB_URL
+    # plane-api-migrate-1's pod template gets a fresh timestamp
+    # annotation on every Helm render, and a Job's .spec.template is
+    # immutable post-creation as a whole — so any values change
+    # anywhere in this chart (even ones with nothing to do with the
+    # migrate job, e.g. the worker memory bump) causes the next sync
+    # to fail with "field is immutable", which then blocks ArgoCD from
+    # retrying that revision at all until someone manually runs
+    # `kubectl delete job plane-api-migrate-1 -n plane` and re-syncs.
+    # Masking the template annotations from diff computation stops
+    # ArgoCD from attempting that patch in the first place, so routine
+    # values changes elsewhere in the chart no longer trip this. A
+    # genuine change to the migrate job itself (new image/command from
+    # an actual chart version bump) will still need the manual delete
+    # — that's real drift, not noise, and this entry doesn't mask it.
+    - group: "batch"
+      kind: Job
+      name: plane-api-migrate-1
+      namespace: plane
+      jqPathExpressions:
+        - .spec.template.metadata.annotations
