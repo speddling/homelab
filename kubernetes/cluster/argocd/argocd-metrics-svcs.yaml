@@ -1,10 +1,10 @@
 # ArgoCD metrics NodePort Services
 #
 # Exposes ArgoCD internal metrics on NodePorts so Prometheus on Watchtower
-# (192.168.0.21) can scrape them without an in-cluster Prometheus.
+# (192.168.30.11) can scrape them without an in-cluster Prometheus.
 #
 # Scrape targets in prometheus.yml.j2:
-#   argocd-app-controller: monolith.littlewolfacres.com:30882
+#   argocd-app-controller: monolith.littlewolfacres.com:30885
 #   argocd-server-metrics:  monolith.littlewolfacres.com:30883
 #
 # Key metrics:
@@ -13,7 +13,7 @@
 #   argocd_cluster_api_resource_objects         — cluster resource counts
 #
 # Port reservations (see ansible/vars/main.yml):
-#   30882 — argocd-application-controller metrics
+#   30885 — argocd-application-controller metrics
 #   30883 — argocd-server metrics
 
 ---
