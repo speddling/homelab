@@ -34,14 +34,27 @@ spec:
     server: https://kubernetes.default.svc
     namespace: argocd
   ignoreDifferences:
-    # Repo secret data is injected by bootstrap workflow — ArgoCD must not
-    # overwrite it with the placeholder value from the manifest.
+    # Repo secret data is injected by bootstrap/rotation workflows — ArgoCD
+    # must not overwrite it with the placeholder value from the manifest.
+    #
+    # /stringData is included alongside /data because the tracked manifest
+    # uses `stringData:`, which Kubernetes converts server-side into `data`
+    # and never persists back as `stringData` on the live object. With only
+    # /data ignored, ArgoCD's diff still sees the desired manifest's
+    # `stringData` block as "present in git, missing live" and self-heals
+    # it back in — silently overwriting the real rotated token with the
+    # placeholder string on the next reconcile. Confirmed happening in
+    # production 2026-07-13: a token rotated and verified working was
+    # clobbered back to PLACEHOLDER_SET_BY_BOOTSTRAP_WORKFLOW within ~30
+    # minutes, with no manual action in between — this Application's own
+    # routine self-heal cycle did it.
     - group: ""
       kind: Secret
       name: homelab-repo
       namespace: argocd
       jsonPointers:
         - /data
+        - /stringData
   syncPolicy:
     automated:
       prune: true
