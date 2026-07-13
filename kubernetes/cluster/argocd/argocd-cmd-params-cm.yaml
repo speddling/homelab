@@ -5,8 +5,23 @@
 #   using the cert-manager issued Let's Encrypt certificate, then forwards
 #   plain HTTP to argocd-server:8080. Required for standard Traefik ingress.
 #
+# reposerver.repo.cache.expiration: 5m
+#   Default is 24h, which is a poor fit for a poll-only GitOps loop with no
+#   GitHub webhook configured (nothing pushes ArgoCD to refresh early on a
+#   merge). Learned the hard way during the lwa-infra rename incident
+#   (2026-07-13): after fixing repoURLs and rotating credentials, the
+#   repo-server kept serving a stale cached manifest generated under the old
+#   URL for the remainder of the 24h window, requiring a manual hard-refresh
+#   annotation to force it. 5m keeps the reconciliation loop (also ~3m by
+#   default) meaningfully responsive without hammering GitHub on every poll.
+#   A real webhook is the more complete fix and should replace/shorten this
+#   further if set up later — see Plane, LWA Infra project.
+#
 # Applied during bootstrap before ArgoCD server starts.
-# ArgoCD watches this ConfigMap and reloads on change.
+# ArgoCD watches this ConfigMap and reloads on change — but repo-server
+# specifically has needed a manual `kubectl rollout restart
+# deployment/argocd-repo-server` to pick up cache-expiration changes in
+# practice; don't assume the hot-reload covers this flag.
 
 apiVersion: v1
 kind: ConfigMap
@@ -18,3 +33,4 @@ metadata:
     app.kubernetes.io/part-of: argocd
 data:
   server.insecure: "true"
+  reposerver.repo.cache.expiration: "5m"
