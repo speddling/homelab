@@ -199,7 +199,7 @@ nut_monitor_user:    "monuser"
 # -----------------------------------------------------------------------------
 argocd_namespace:        "argocd"
 argocd_repo_secret_name: "homelab-repo"
-argocd_repo_url:         "https://github.com/speddling/lwa-homelab"
+argocd_repo_url:         "https://github.com/speddling/lwa-infra"
 argocd_repo_username:    "speddling"
 # Token: vault_argocd_github_token (see vault.yml)
 # Rotation: Actions → Rotate ArgoCD Credentials → Run workflow
