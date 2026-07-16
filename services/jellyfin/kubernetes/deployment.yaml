@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jellyfin
+  namespace: jellyfin
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jellyfin
+  template:
+    metadata:
+      labels:
+        app: jellyfin
+    spec:
+      containers:
+        - name: jellyfin
+          image: jellyfin/jellyfin:10.11.7  # pinned stable — verify against jellyfin.org before bumping
+          envFrom:
+            - configMapRef:
+                name: jellyfin-config
+          ports:
+            - containerPort: 8096
+          volumeMounts:
+            - name: config-storage
+              mountPath: /config
+            - name: media-storage
+              mountPath: /media
+              readOnly: true
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "250m"
+            limits:
+              memory: "2Gi"
+              cpu: "1500m"  # transcoding is CPU-hungry without hardware accel; raise if you see throttling
+      volumes:
+        - name: config-storage
+          persistentVolumeClaim:
+            claimName: jellyfin-config
+        - name: media-storage
+          hostPath:
+            path: /mnt/hdd-c/media-library  # must exist before first apply — hostPath type Directory fails otherwise
+            type: Directory
