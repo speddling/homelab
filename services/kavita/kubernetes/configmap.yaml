@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kavita-config
+  namespace: kavita
+data:
+  TZ: "America/New_York"

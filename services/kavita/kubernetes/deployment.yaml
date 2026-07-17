@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kavita
+  namespace: kavita
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kavita
+  template:
+    metadata:
+      labels:
+        app: kavita
+    spec:
+      containers:
+        - name: kavita
+          image: jvmilazz0/kavita:0.9.0  # pinned stable — kizaing/kavita is archived, this is the maintained fork
+          envFrom:
+            - configMapRef:
+                name: kavita-config
+          ports:
+            - containerPort: 5000
+          volumeMounts:
+            - name: config-storage
+              mountPath: /kavita/config
+            - name: books-storage
+              mountPath: /books
+              readOnly: true
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "150m"
+            limits:
+              memory: "1Gi"
+              cpu: "1000m"  # covers manga page conversion/caching bursts on first scan
+      volumes:
+        - name: config-storage
+          persistentVolumeClaim:
+            claimName: kavita-config
+        - name: books-storage
+          hostPath:
+            path: /mnt/hdd-c/media-library/Books  # must exist before first apply — hostPath type Directory fails otherwise
+            type: Directory
