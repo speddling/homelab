@@ -1,0 +1,31 @@
+name: Deploy Kavita
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: [self-hosted, monolith]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Apply storage config
+        run: |
+          kubectl apply -f kubernetes/cluster/storage/local-path-config.yaml
+
+      - name: Apply Kubernetes manifests
+        run: |
+          kubectl apply -f services/kavita/kubernetes/namespace.yaml
+          kubectl apply -f services/kavita/kubernetes/pvc.yaml
+          kubectl apply -f services/kavita/kubernetes/configmap.yaml
+          kubectl apply -f services/kavita/kubernetes/deployment.yaml
+          kubectl apply -f services/kavita/kubernetes/service.yaml
+          kubectl apply -f services/kavita/kubernetes/ingress.yaml
+
+      - name: Verify deployment
+        run: |
+          echo "Checking volume binding..."
+          kubectl get pvc -n kavita
+          echo "Checking pod status..."
+          kubectl get pods -n kavita
