@@ -6,7 +6,7 @@ construct_cpus: 8
 construct_ssh_port: 2222
 construct_vm_path: /vm/construct
 construct_lv_name: construct
-construct_vg_name: vg-root
+construct_vg_name: ubuntu-vg
 construct_hostname: construct
 construct_user: speddling
 construct_debian_version: "12"
