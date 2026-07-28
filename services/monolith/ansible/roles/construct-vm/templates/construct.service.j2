@@ -15,6 +15,7 @@ ExecStart=/usr/bin/qemu-system-x86_64 \
   -drive file={{ construct_vm_path }}/cloud-init.iso,media=cdrom,readonly=on \
   -netdev user,id=net0,hostfwd=tcp::{{ construct_ssh_port }}-:22 \
   -device virtio-net-pci,netdev=net0 \
+  -display none \
   -daemonize \
   -pidfile /run/construct.pid
 
