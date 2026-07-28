@@ -4,7 +4,7 @@ After=network.target
 
 [Service]
 Type=forking
-PIDFile=/var/run/construct.pid
+PIDFile=/run/construct.pid
 ExecStart=/usr/bin/qemu-system-x86_64 \
   -enable-kvm \
   -m {{ construct_memory_mb }} \
@@ -15,10 +15,8 @@ ExecStart=/usr/bin/qemu-system-x86_64 \
   -drive file={{ construct_vm_path }}/cloud-init.iso,media=cdrom,readonly=on \
   -netdev user,id=net0,hostfwd=tcp::{{ construct_ssh_port }}-:22 \
   -device virtio-net-pci,netdev=net0 \
-  -nographic \
-  -serial mon:stdio \
   -daemonize \
-  -pidfile /var/run/construct.pid
+  -pidfile /run/construct.pid
 
 ExecStop=/bin/kill $MAINPID
 Restart=on-failure
