@@ -1,0 +1,65 @@
+name: Bootstrap Construct VM
+
+on:
+  workflow_dispatch:
+    inputs:
+      rebuild:
+        description: 'Force rebuild (destroys existing VM)'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
+
+jobs:
+  provision:
+    name: Provision Construct VM
+    runs-on: [self-hosted, monolith]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Write vault password
+        run: |
+          mkdir -p ~/lwa-homelab
+          echo '${{ secrets.ANSIBLE_VAULT_PASSWORD }}' > ~/lwa-homelab/.vault_pass
+          chmod 600 ~/lwa-homelab/.vault_pass
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y ansible
+          ansible-galaxy collection install community.general ansible.posix
+
+      - name: Destroy existing VM (if rebuild requested)
+        if: github.event.inputs.rebuild == 'true'
+        run: |
+          sudo systemctl stop construct || true
+          sudo umount /vm/construct || true
+          sudo lvremove -f /dev/vg-root/construct || true
+          sudo rm -rf /vm/construct
+
+      - name: Run Ansible — Provision Construct
+        working-directory: services/monolith/ansible
+        run: |
+          ansible-playbook -i inventory.ini playbooks/construct.yml \
+            --vault-password-file ~/lwa-homelab/.vault_pass
+
+      - name: Wait for VM to boot
+        run: sleep 60
+
+      - name: Verify VM is accessible
+        run: |
+          timeout 30 bash -c 'until nc -z localhost 2222; do sleep 2; done'
+          echo "✅ Construct VM is accessible on port 2222"
+
+      - name: Display connection info
+        run: |
+          echo "🎉 Construct VM provisioned successfully!"
+          echo ""
+          echo "Connect via:"
+          echo "  ssh -p 2222 speddling@monolith  (port forward)"
+          echo "  ssh speddling@construct         (Tailscale, once authenticated)"
+          echo ""
+          echo "Check Tailscale status:"
+          echo "  ssh -p 2222 speddling@monolith 'sudo tailscale status'"

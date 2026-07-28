@@ -1,0 +1,13 @@
+---
+# Default variables for construct-vm role
+construct_disk_size_gb: 80
+construct_memory_mb: 16384
+construct_cpus: 8
+construct_ssh_port: 2222
+construct_vm_path: /vm/construct
+construct_lv_name: construct
+construct_vg_name: vg-root
+construct_hostname: construct
+construct_user: speddling
+construct_debian_version: "12"
+construct_cloud_image_url: "https://cloud.debian.org/images/cloud/bookworm/latest/debian-12-generic-amd64.qcow2"

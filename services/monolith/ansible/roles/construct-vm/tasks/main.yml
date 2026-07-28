@@ -1,0 +1,102 @@
+---
+# Construct VM provisioning tasks
+
+- name: Install QEMU/KVM and dependencies
+  ansible.builtin.apt:
+    name:
+      - qemu-system-x86
+      - qemu-utils
+      - cloud-image-utils
+      - genisoimage
+      - python3-lvm2
+    state: present
+    update_cache: yes
+
+- name: Create LVM logical volume for construct
+  community.general.lvol:
+    vg: "{{ construct_vg_name }}"
+    lv: "{{ construct_lv_name }}"
+    size: "{{ construct_disk_size_gb }}g"
+    state: present
+
+- name: Format construct logical volume
+  community.general.filesystem:
+    fstype: ext4
+    dev: "/dev/{{ construct_vg_name }}/{{ construct_lv_name }}"
+
+- name: Create construct mount point
+  ansible.builtin.file:
+    path: "{{ construct_vm_path }}"
+    state: directory
+    mode: '0755'
+
+- name: Mount construct logical volume
+  ansible.posix.mount:
+    path: "{{ construct_vm_path }}"
+    src: "/dev/{{ construct_vg_name }}/{{ construct_lv_name }}"
+    fstype: ext4
+    state: mounted
+
+- name: Download Debian cloud image
+  ansible.builtin.get_url:
+    url: "{{ construct_cloud_image_url }}"
+    dest: "{{ construct_vm_path }}/debian-{{ construct_debian_version }}-generic-amd64.qcow2"
+    mode: '0644'
+    timeout: 300
+
+- name: Create construct disk from cloud image
+  ansible.builtin.command:
+    cmd: >
+      qemu-img create -f qcow2 -F qcow2
+      -b {{ construct_vm_path }}/debian-{{ construct_debian_version }}-generic-amd64.qcow2
+      {{ construct_vm_path }}/disk.img
+      {{ construct_disk_size_gb }}G
+    creates: "{{ construct_vm_path }}/disk.img"
+
+- name: Create cloud-init config directory
+  ansible.builtin.file:
+    path: "{{ construct_vm_path }}/cloud-init"
+    state: directory
+    mode: '0755'
+
+- name: Generate cloud-init user-data
+  ansible.builtin.template:
+    src: cloud-init-user-data.j2
+    dest: "{{ construct_vm_path }}/cloud-init/user-data"
+    mode: '0644'
+  tags: cloud-init
+
+- name: Generate cloud-init meta-data
+  ansible.builtin.template:
+    src: cloud-init-meta-data.j2
+    dest: "{{ construct_vm_path }}/cloud-init/meta-data"
+    mode: '0644'
+  tags: cloud-init
+
+- name: Create cloud-init ISO
+  ansible.builtin.command:
+    cmd: >
+      genisoimage -output {{ construct_vm_path }}/cloud-init.iso
+      -volid cidata -joliet -rock
+      {{ construct_vm_path }}/cloud-init/user-data
+      {{ construct_vm_path }}/cloud-init/meta-data
+    creates: "{{ construct_vm_path }}/cloud-init.iso"
+  tags: cloud-init
+
+- name: Install construct systemd service
+  ansible.builtin.template:
+    src: construct.service.j2
+    dest: /etc/systemd/system/construct.service
+    mode: '0644'
+  notify: Reload systemd
+
+- name: Enable construct service
+  ansible.builtin.systemd:
+    name: construct
+    enabled: yes
+    daemon_reload: yes
+
+- name: Start construct service
+  ansible.builtin.systemd:
+    name: construct
+    state: started
