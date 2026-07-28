@@ -11,8 +11,8 @@ Persistent development environment accessible via Tailscale and wmux for seamles
 - **QEMU/KVM** process on monolith managed by systemd
 - **Disk image:** `/vm/construct/disk.img` (80G qcow2, dynamically allocated)
 - **Cloud image:** `/vm/construct/debian-12-generic-amd64.qcow2` (base artifact)
-- **Cloud-init ISO:** `/vm/construct/cloud-init.iso` (generated at provision time)
-- **SSH:** `construct.yourtailnet.ts.net` (via Tailscale) or `monolith:2222` (port forward)
+- **Cloud-init ISO:** `/vm/construct/cloud-init.iso` (regenerated at provision time)
+- **SSH:** `speddling@100.67.178.34` via Tailscale (`construct-1`) or `ssh -p 2222 speddling@monolith` via port forward
 - **OS:** Debian 12 (Bookworm)
 
 ## What's Here
@@ -40,7 +40,7 @@ ansible-playbook -i inventory.ini playbooks/construct.yml \
 
 ```bash
 # Via Tailscale (primary)
-ssh speddling@construct
+ssh speddling@100.67.178.34
 
 # Via port forward (fallback)
 ssh -p 2222 speddling@monolith

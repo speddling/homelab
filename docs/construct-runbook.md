@@ -3,8 +3,8 @@
 
 **Host:** monolith (`192.168.30.10`)
 **Guest:** Debian 12 (Bookworm)
-**SSH (Tailscale):** `construct.yourtailnet.ts.net`
-**SSH (port forward):** `monolith:2222` → `construct:22`
+**SSH (Tailscale):** `speddling@100.67.178.34` (Tailscale name: `construct-1`)
+**SSH (port forward):** `ssh -p 2222 speddling@monolith` → `construct:22`
 **User:** `speddling` (sudo)
 
 ---
@@ -132,10 +132,24 @@ sudo systemctl restart construct
 ## Network Access
 
 ### Via Tailscale (Primary)
-Once the VM joins your tailnet (automatic via cloud-init):
 ```bash
-ssh speddling@construct
+ssh speddling@100.67.178.34
 ```
+
+**Recommended `~/.ssh/config` entry:**
+```text
+Host construct
+  HostName 100.67.178.34
+  User speddling
+```
+
+Then you can use:
+```bash
+ssh construct
+```
+
+> **Note:** Tailscale assigns a new machine identity on disk rebuild. The old IP `100.73.168.20` (`construct`) went offline after the rebuild; the live IP is now `100.67.178.34` (`construct-1`).
+
 
 ### Via Port Forward (Fallback)
 If Tailscale is down or not yet authenticated:
@@ -253,7 +267,9 @@ top -p $(cat /var/run/construct.pid)
 
 ```bash
 # SSH via Tailscale (primary)
-ssh speddling@construct
+ssh speddling@100.67.178.34
+# or, with ~/.ssh config entry above:
+ssh construct
 
 # SSH via port forward (fallback)
 ssh -p 2222 speddling@monolith
