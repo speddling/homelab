@@ -21,3 +21,6 @@ override.tf.json
 # Web assets — binary/media files managed outside the repo
 docs/web/lwa.jpg
 docs/web/mythic/mythic_coming.png
+
+# Node.js dependencies — regenerable via npm install
+node_modules/

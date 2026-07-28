@@ -1,0 +1,3 @@
+---
+# Default variables for tailscale role
+tailscale_tags: "tag:homelab,tag:monolith"
