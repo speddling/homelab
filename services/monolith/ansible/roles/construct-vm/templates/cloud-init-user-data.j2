@@ -12,11 +12,12 @@ users:
     shell: /bin/bash
     sudo: ['ALL=(ALL) NOPASSWD:ALL']
     lock_passwd: false
-    plain_text_passwd: 'tempDebug123'
     ssh_authorized_keys:
       - {{ ssh_public_key_construct }}
 
 chpasswd:
+  list: |
+    {{ construct_user }}:tempDebug123
   expire: false
 
 # Package installation moved to runcmd with retry logic
