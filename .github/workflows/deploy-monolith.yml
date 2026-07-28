@@ -39,6 +39,7 @@ jobs:
         run: |
           ansible-playbook -i inventory.ini playbooks/firewall.yml --syntax-check
           ansible-playbook -i inventory.ini playbooks/monitoring.yml --syntax-check
+          ansible-playbook -i inventory.ini playbooks/tailscale.yml --syntax-check
 
   deploy:
     needs: validate
@@ -69,4 +70,10 @@ jobs:
         working-directory: services/monolith/ansible
         run: |
           ansible-playbook -i inventory.ini playbooks/monitoring.yml \
+            --vault-password-file ~/lwa-homelab/.vault_pass
+
+      - name: Run Ansible — Tailscale
+        working-directory: services/monolith/ansible
+        run: |
+          ansible-playbook -i inventory.ini playbooks/tailscale.yml \
             --vault-password-file ~/lwa-homelab/.vault_pass
