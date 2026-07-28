@@ -26,9 +26,9 @@
 - name: Bring Tailscale up with auth key
   ansible.builtin.command: >
     tailscale up
+    --reset
     --authkey={{ tailscale_auth_key }}
     --accept-routes
-    --advertise-tags={{ tailscale_tags }}
   register: tailscale_up
   changed_when: "'Logged in' in tailscale_up.stdout or tailscale_up.rc == 0"
   failed_when: tailscale_up.rc != 0 and 'is already running' not in tailscale_up.stderr

@@ -1,12 +1,12 @@
 # LWA Infra
-> Last updated: 2026-07-07
+> Last updated: 2026-07-28
 
 ## Hardware
 
 | Node | Hostname | Specs | Role |
 |---|---|---|---|
 | MacBook Air M4 (2025) | `apex` | 16GB unified, 256GB | Primary workstation, control plane, all authoring originates here |
-| AMD Ryzen 7 5700G | `monolith` | 8c/16t, 64GB DDR4-3200, 512GB NVMe + 500GB SSD + 256GB SSD + 3.6TB HDD + 1.8TB HDD | k3s single-node cluster, household services, Obelisk QEMU host |
+| AMD Ryzen 7 5700G | `monolith` | 8c/16t, 64GB DDR4-3200, 512GB NVMe + 500GB SSD + 256GB SSD + 3.6TB HDD + 1.8TB HDD | k3s single-node cluster, household services, Obelisk & Construct QEMU host |
 | Asus VM40B | `watchtower` | Celeron 1007U, 8GB DDR3-1600, 1TB Crucial MX500 | DNS and monitoring, never runs workloads |
 | Dell Precision 5560 | `studio` | i9-11950H, 32GB DDR4, 512GB NVMe | Personal DAW: Reaper + M-Audio Air 192\|14 |
 
@@ -54,13 +54,14 @@ Services running locally on apex are deployed manually via Ansible since it is m
 | Workflow | Trigger | What it does |
 |---|---|---|
 | `deploy-watchtower.yml` | Push to master | DNS, monitoring, exporters, Loki/Promtail |
-| `deploy-monolith.yml` | Push to master | Firewall, monitoring agents |
+| `deploy-monolith.yml` | Push to master | Firewall, monitoring agents, Tailscale |
 | `deploy-synapse.yml` | Push to master | Synapse MCP server |
 | `deploy-fileserver.yml` | Manual | Samba config |
 | `rotate-argocd-credentials.yml` | Manual + quarterly | PAT rotation |
 | `import-minecraft-world.yml` | Manual | Stage world via Ansible and bounce pod |
 | `slack-minecraft-import.yml` | Zombatron Importer bot | Clear import marker and bounce pod |
 | `bootstrap-argocd.yml` | Manual (once) | cert-manager + ArgoCD install |
+| `bootstrap-construct.yml` | Manual (once) | Debian 12 dev VM provisioning |
 | `provision-k3s.yml` | Manual | k3s cluster init |
 
 ## Services
@@ -72,6 +73,7 @@ Services running locally on apex are deployed manually via Ansible since it is m
 | Minecraft Bedrock | monolith | Family Minecraft server |
 | Samba | monolith | Network file shares |
 | Obelisk (Win11 VM) | monolith | Client-facing Windows environment, RDP |
+| Construct (Debian 12 VM) | monolith | Persistent development environment via Tailscale + wmux |
 | Plane | monolith | Project management and incident tracking |
 | AdGuard Home + Unbound | watchtower | Recursive DNS with ad and tracker blocking |
 | Prometheus | watchtower | Metrics collection |

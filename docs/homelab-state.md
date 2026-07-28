@@ -1,5 +1,5 @@
 # LWA Infra -- Current State
-> Last updated: 2026-07-07
+> Last updated: 2026-07-28
 
 ---
 
@@ -229,7 +229,7 @@ DNS resolution and infrastructure monitoring.
 | Kernel | 6.8.0-111-generic |
 | Hostname | `monolith` |
 | IP | 192.168.30.10 (Infra VLAN) |
-| Storage | 512 GB NVMe -- Samsung PM9A1 -- `/` (150G LVM) |
+| Storage | 512 GB NVMe -- Samsung PM9A1 -- `/` (150G LVM) + `/vm/construct` (80G LVM) |
 | | 500 GB SSD -- Crucial CT500MX500SSD1 -- `/mnt/ssd-a` -- k8s local-path provisioner |
 | | 256 GB SSD -- Crucial CT256M55 -- `/mnt/ssd-b` -- isolated workspace / client jumpbox |
 | | 3.6 TB HDD -- Seagate ST4000DM004 -- `/mnt/hdd-c` -- music library / fileserver / bulk storage |
@@ -256,6 +256,7 @@ k3s single-node cluster host. Runs all household and client services.
 |---|---|---|
 | Synapse | ✅ Active | MCP/AI tooling namespace |
 | Obelisk | ✅ Active | Windows 11 VM on `/mnt/ssd-b` -- QEMU/KVM. RDP: `192.168.30.10:33389` |
+| Construct | ✅ Active | Debian 12 dev VM on NVMe `/vm/construct` -- QEMU/KVM. SSH: `construct` (Tailscale) or `monolith:2222` |
 
 ### Services
 
@@ -269,6 +270,7 @@ k3s single-node cluster host. Runs all household and client services.
 | Synapse | MCP server | ✅ Running |
 | hdd-d mirror | Nightly rsync hdd-c -> hdd-d via systemd timer at 02:00 | ✅ Running |
 | Obelisk | QEMU/KVM Win11 VM -- RDP `192.168.30.10:33389` | ✅ Running |
+| Construct | QEMU/KVM Debian 12 dev VM -- SSH `monolith:2222` or Tailscale | ✅ Running |
 | Plane | Project management -- `plane.littlewolfacres.com` | ✅ Running (via ArgoCD) |
 
 ### Samba Shares
@@ -304,6 +306,7 @@ k3s single-node cluster host. Runs all household and client services.
 | 30885 | TCP | ArgoCD app-controller metrics | watchtower |
 | 30883 | TCP | ArgoCD server metrics | watchtower |
 | 30900 | TCP | kube-state-metrics | watchtower |
+| 2222 | TCP | Construct SSH (port forward) | LAN + Tailscale |
 | 33389 | TCP | Obelisk RDP (NodePort) | LAN |
 | 39182 | TCP | Obelisk windows_exporter | watchtower |
 
