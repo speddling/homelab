@@ -8,7 +8,7 @@
       - qemu-utils
       - cloud-image-utils
       - genisoimage
-      - python3-lvm2
+      - lvm2
     state: present
     update_cache: yes
 
