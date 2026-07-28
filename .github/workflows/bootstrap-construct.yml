@@ -48,9 +48,14 @@ jobs:
       - name: Wait for VM to boot
         run: sleep 60
 
-      - name: Verify VM is accessible
+      - name: Verify VM is running
         run: |
-          timeout 30 bash -c 'until nc -z localhost 2222; do sleep 2; done'
+          echo "Checking systemd service status..."
+          sudo systemctl status construct --no-pager || true
+          
+          echo ""
+          echo "Waiting for SSH port 2222 to be accessible..."
+          timeout 30 bash -c 'until timeout 1 bash -c "</dev/tcp/localhost/2222" 2>/dev/null; do echo "  Waiting..."; sleep 2; done'
           echo "✅ Construct VM is accessible on port 2222"
 
       - name: Display connection info
