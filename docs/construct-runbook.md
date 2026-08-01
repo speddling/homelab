@@ -199,6 +199,30 @@ http://construct.tailea7d70.ts.net:3478/?token=6gqmWHW4xuPdu8OIwcKUmIJB4akGrL91
 > `dist/` is available via `npm start` for production mode if performance
 > becomes an issue.
 
+### wmux 403 Forbidden (wrong Host header)
+
+**Symptom**: Accessing wmux via a custom domain (`construct.littlewolfacres.com`)
+returns `403 Forbidden` with `{"error":"forbidden_host"}`.
+
+**Cause**: wmux validates the `Host` header against an allowlist. By default,
+only the bound IP, `localhost`, and `*.ts.net` names are accepted. Custom
+domains must be added via `WMUX_ALLOWED_HOSTS`.
+
+**Fix**: Add `construct.littlewolfacres.com` to `WMUX_ALLOWED_HOSTS` in the
+wmux service file:
+```bash
+# Edit the service file
+nano /home/speddling/.config/systemd/user/wmux.service
+# Add: Environment=WMUX_ALLOWED_HOSTS=construct.littlewolfacres.com
+
+# Restart the service
+systemctl --user daemon-reload
+systemctl --user restart wmux.service
+```
+
+This is already handled by the cloud-init template (variable:
+`construct_wmux_allowed_hosts`).
+
 ### DNS Names
 
 wmux is reachable via several DNS names, all resolving to the same Tailscale IP

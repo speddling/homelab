@@ -193,6 +193,7 @@ Environment=WMUX_PORT={{ construct_wmux_port }}
 Environment=WMUX_PUBLIC_URL=${WMUX_BASE}
 Environment=WMUX_HELPER_URL=http://${TS_IP}:{{ construct_wmux_port }}
 Environment=WMUX_ALLOWED_BIND_RANGES=
+Environment=WMUX_ALLOWED_HOSTS={{ construct_wmux_allowed_hosts | default("") }}
 Environment=WMUX_BROWSER_AUTH_MODE=shared-or-login
 Environment=WMUX_AUTOMATION_TOKEN_PATH=
 Environment=WMUX_HELPER_TOKEN_PATH=

@@ -15,6 +15,11 @@ construct_cloud_image_url: "https://cloud.debian.org/images/cloud/bookworm/lates
 # wmux browser terminal multiplexer settings
 construct_wmux_port: 3478
 
+# Additional hostnames wmux accepts in the Host header (beyond the Tailscale IP
+# and *.ts.net names which are auto-allowed). Use this to enable vanity domains
+# like construct.littlewolfacres.com.
+construct_wmux_allowed_hosts: "construct.littlewolfacres.com"
+
 # DNS server for the construct VM. Tailscale tailnet has no upstream DNS
 # resolvers configured, so --accept-dns=false is used and resolv.conf is
 # managed manually. 192.168.30.11 = watchtower local DNS.
