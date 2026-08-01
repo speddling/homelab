@@ -233,7 +233,7 @@ runcmd:
       DEBIAN_FRONTEND=noninteractive apt-get install -y \
         curl wget git vim tmux jq build-essential \
         python3 python3-pip nodejs npm golang \
-        htop net-tools ca-certificates gnupg lsb-release && break
+        htop net-tools ca-certificates gnupg lsb-release iptables-persistent \ && break
       echo "Package installation failed, retry $i/3"
       sleep 10
     done
@@ -242,6 +242,10 @@ runcmd:
   - /tmp/setup-dns.sh
   - /tmp/setup-dev-tools.sh
   - /tmp/setup-wmux-service.sh
+  # Redirect port 80 → 3478 on Tailscale interface for portless browser access
+  # (e.g. http://construct.littlewolfacres.com instead of :3478)
+  # Idempotent: skips if rule already exists.
+  - iptables -t nat -C PREROUTING -i tailscale0 -p tcp --dport 80 -j REDIRECT --to-port 3478 2>/dev/null || iptables -t nat -A PREROUTING -i tailscale0 -p tcp --dport 80 -j REDIRECT --to-port 3478
   # Temporarily enable password authentication for debugging
   - sed -i 's/^#\?PasswordAuthentication.*/PasswordAuthentication yes/' /etc/ssh/sshd_config
   - sed -i 's/^#\?PermitRootLogin.*/PermitRootLogin no/' /etc/ssh/sshd_config
@@ -255,3 +259,4 @@ final_message: |
   SSH: ssh {{ construct_user }}@{{ construct_hostname }}
   Tailscale should be authenticated and connected.
   wmux should be running on port 3478 (accessible via Tailscale IP).
+  Browser access: http://construct.littlewolfacres.com/?token=$(cat ~/.wmux/token)

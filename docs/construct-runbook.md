@@ -247,6 +247,22 @@ wmux is reachable via several DNS names, all resolving to the same Tailscale IP
 The cloud-init automatically detects the Tailscale DNS name and sets it as
 `WMUX_PUBLIC_URL` in the service file. This survives IP changes across rebuilds.
 
+### Portless Access (port 80 → 3478 redirect)
+
+wmux listens on port 3478, but for convenience a portless URL (`http://construct.littlewolfacres.com/`)
+is available via an iptables redirect installed by cloud-init:
+
+```bash
+# Redirects port 80 → 3478 on the Tailscale interface
+iptables -t nat -C PREROUTING -i tailscale0 -p tcp --dport 80 -j REDIRECT --to-port 3478
+```
+
+This rule is idempotent (skips if already present) and persists across reboots via
+`iptables-persistent` (installed as an apt package in cloud-init). It only applies
+to traffic arriving via the Tailscale interface — localhost traffic is unaffected.
+
+**Browser URL**: `http://construct.littlewolfacres.com/?token=6gqmWHW4xuPdu8OIwcKUmIJB4akGrL91`
+
 ### Install Additional Tools
 ```bash
 # Inside construct
