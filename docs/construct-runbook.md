@@ -1,5 +1,5 @@
 # LWA Infra -- Construct Runbook
-> Last updated: 2026-07-28
+> Last updated: 2026-08-01
 
 **Host:** monolith (`192.168.30.10`)
 **Guest:** Debian 12 (Bookworm)
@@ -93,10 +93,13 @@ ansible-playbook -i inventory.ini playbooks/construct.yml \
 **First boot** (via cloud-init):
 - Creates user, installs SSH key
 - Sets hostname
-- Installs and authenticates Tailscale
+- Installs and authenticates Tailscale (`--accept-dns=false`, DNS managed manually)
 - Installs: git, gh, node, python, go, tmux, vim, curl, jq
-- Installs Pi coding agent
-- Installs wmux
+- Installs NVM + Node.js 22
+- Installs Pi coding agent (under Node 22)
+- Installs and builds wmux
+- Creates wmux systemd user service (auto-started)
+- Fixes DNS (resolv.conf → watchtower DNS, chattr +i)
 
 ---
 
@@ -168,6 +171,29 @@ Host port 2222 forwards to construct's port 22.
 ssh speddling@construct
 wmux new dev    # or wmux attach dev if session exists
 ```
+
+wmux is also running as a systemd user service (`wmux.service`) on construct,
+accessible via browser over Tailscale:
+
+```text
+http://100.67.178.34:3478/?token=6gqmWHW4xuPdu8OIwcKUmIJB4akGrL91
+```
+
+- **No SSH tunnel needed** — construct is directly reachable at its Tailscale IP
+- **Token** is stored in `~/.wmux/token` inside the VM
+- **Machine**: "construct" is configured as `kind: local` (spawns a bash PTY
+  on construct itself)
+- **Auth mode**: `shared-or-login` (shared token URL by default)
+- **Management**:
+  ```bash
+  systemctl --user status wmux.service
+  systemctl --user restart wmux.service
+  journalctl --user -u wmux.service -f
+  ```
+
+> **Dev mode**: The service runs `npm run dev` (tsx hot-reload). The pre-built
+> `dist/` is available via `npm start` for production mode if performance
+> becomes an issue.
 
 ### Install Additional Tools
 ```bash
@@ -245,6 +271,50 @@ sudo journalctl -u construct -f
 
 3. Check Tailscale admin console for construct node
 
+### DNS Resolution Failure (Tailscale upstream DNS missing)
+
+**Symptom**: Pi reports "Connection error" / "Retry failed after 3 attempts"
+when trying to reach model provider APIs (api.github.com, api.kilo.ai, etc.).
+DNS lookups return empty.
+
+**Root cause**: The Tailscale tailnet has no upstream DNS resolvers configured
+in the admin console. Tailscale's managed stub resolver (100.100.100.100) can
+only resolve internal `.ts.net` domains, not public internet domains.
+
+**Fix applied** (in cloud-init):
+- `--accept-dns=false` passed to `tailscale up` (prevents Tailscale from
+  managing `/etc/resolv.conf`)
+- `/etc/resolv.conf` written with the local DNS server (watchtower at
+  `192.168.30.11`)
+- `chattr +i /etc/resolv.conf` prevents overwrites
+
+**Permanent fix** (to do once in [Tailscale admin console](https://login.tailscale.com/admin/dns)):
+1. Go to **DNS → Nameservers**
+2. Add `192.168.30.11` (or `1.1.1.1`, `8.8.8.8`) as upstream DNS servers
+3. After applying, revert the cloud-init local fix (remove `--accept-dns=false`
+   and the manual resolv.conf writes) — Tailscale will manage DNS properly
+   tailnet-wide
+
+### Node.js Version Mismatch (crypto.hash / regex v flag)
+
+**Symptom**: `SyntaxError: Invalid regular expression flags` when running pi,
+or `crypto.hash is not a function` when running wmux.
+
+**Cause**: Debian 12 ships Node.js 18. Both pi-coding-agent and wmux require
+Node.js 22+ (they use `crypto.hash()` and regex `v` flag).
+
+**Fix**: Node.js 22 is installed via [nvm](https://github.com/nvm-sh/nvm)
+and set as the default. The wmux systemd service sets `PATH` to use
+`~/.nvm/versions/node/v22.x/bin`. nvm init is sourced in both `.bashrc`
+and `.profile` so non-interactive shells (SSH commands, systemd) also pick up
+Node 22.
+
+**For automation**: The cloud-init installs nvm, installs Node 22, and writes
+nvm init to `.bashrc`/`.profile`. If rebuilding, verify with:
+```bash
+bash -lc 'node --version'   # should be v22.x
+```
+
 ### Cloud-init didn't run
 Check cloud-init logs inside construct:
 ```bash
@@ -294,10 +364,10 @@ sudo journalctl -u construct -f
 
 ## TODO
 
+- [ ] Configure Tailscale upstream DNS in admin console (192.168.30.11) — eliminates need for local resolv.conf fix
 - [ ] Automated backup cron job (daily qcow2 snapshot to hdd-c)
 - [ ] Prometheus node_exporter inside construct
 - [ ] UFW rules on monolith (SSH port 2222 restricted to LAN + Tailscale)
 - [ ] AdGuard rewrite: `construct.littlewolfacres.com` → Tailscale IP
-- [ ] Document wmux session management best practices
 - [ ] Test disaster recovery (full rebuild from playbook)
 - [ ] Evaluate SPICE for better console access vs nographic

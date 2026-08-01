@@ -29,27 +29,43 @@ write_files:
     content: |
       #!/bin/bash
       set -e
-      
+
       # Add Tailscale repository
       curl -fsSL https://pkgs.tailscale.com/stable/debian/bookworm.noarmor.gpg | \
         sudo tee /usr/share/keyrings/tailscale-archive-keyring.gpg >/dev/null
-      
+
       echo "deb [signed-by=/usr/share/keyrings/tailscale-archive-keyring.gpg] \
         https://pkgs.tailscale.com/stable/debian bookworm main" | \
         sudo tee /etc/apt/sources.list.d/tailscale.list
-      
+
       sudo apt-get update -qq
       sudo apt-get install -y tailscale
-      
+
       # Authenticate
-      sudo tailscale up --authkey={{ tailscale_auth_key }} --accept-routes
+      # --accept-dns=false: Tailscale tailnet has no upstream DNS resolvers
+      # configured in the admin console, so its stub resolver (100.100.100.100)
+      # cannot resolve public domains. We manage /etc/resolv.conf ourselves.
+      sudo tailscale up --authkey={{ tailscale_auth_key }} \
+        --accept-routes --accept-dns=false
+
+  - path: /tmp/setup-dns.sh
+    permissions: '0755'
+    content: |
+      #!/bin/bash
+      set -e
+      # Tailscale tailnet has no upstream DNS resolvers configured.
+      # Use the local DNS server (watchtower) for resolution.
+      # See: https://github.com/tailscale/tailscale — admin console DNS settings.
+      echo "nameserver {{ construct_dns_server }}" > /etc/resolv.conf
+      # Prevent Tailscale or anything else from overwriting resolv.conf
+      chattr +i /etc/resolv.conf
 
   - path: /tmp/setup-dev-tools.sh
     permissions: '0755'
     content: |
       #!/bin/bash
       set -e
-      
+
       # Install GitHub CLI
       curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | \
         sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
@@ -59,20 +75,137 @@ write_files:
         sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
       sudo apt-get update -qq
       sudo apt-get install -y gh
-      
-      # Install Pi coding agent
-      sudo npm install -g @earendil-works/pi-coding-agent
-      
-      # Install NVM for user
+
+      # Install NVM for user and Node.js 22
+      # Debian 12 ships Node 18, but pi-coding-agent and wmux require Node 20+
+      # (they use the regex 'v' flag / crypto.hash API only available in Node 22+).
       sudo -u {{ construct_user }} bash -c 'curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash'
-      
-      # Install wmux (placeholder - update with actual install method)
-      # TODO: Add wmux installation once source is available
+
+      # Install Node.js 22 and set as default
+      sudo -u {{ construct_user }} bash -c '
+        export NVM_DIR="$HOME/.nvm"
+        [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+        nvm install 22
+        nvm alias default 22
+        nvm use default
+      '
+
+      # Ensure nvm loads in interactive and non-interactive shells
+      # (needed for systemd user services and SSH non-interactive commands)
+      sudo -u {{ construct_user }} bash -c '
+        # .bashrc
+        grep -q "NVM_DIR" ~/.bashrc || cat >> ~/.bashrc << '\''
+
+# nvm
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
+'\''
+
+        # .profile
+        grep -q "NVM_DIR" ~/.profile || cat >> ~/.profile << '\''
+
+# nvm
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+'\''
+      '
+
+      # Install Pi coding agent using nvm Node 22 (NOT system Node 18)
+      sudo -u {{ construct_user }} bash -c '
+        export NVM_DIR="$HOME/.nvm"
+        [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+        nvm use 22
+        npm install -g @earendil-works/pi-coding-agent
+      '
+
+      # Install wmux — browser terminal multiplexer
+      sudo -u {{ construct_user }} bash -c '
+        export NVM_DIR="$HOME/.nvm"
+        [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+        nvm use 22
+        git clone https://github.com/gisenberg/wmux.git ~/wmux
+        cd ~/wmux
+        npm install
+        npm run build
+      '
+
+      # Git config
+      sudo -u {{ construct_user }} bash -c '
+        git config --global user.name "James Hart"
+        git config --global user.email "speddling@gmail.com"
+      '
+
+  - path: /tmp/setup-wmux-service.sh
+    permissions: '0755'
+    content: |
+      #!/bin/bash
+      set -e
+
+      # Enable lingering so systemd user services work without an active login session
+      sudo loginctl enable-linger {{ construct_user }}
+
+      # Get the Tailscale IPv4 address of this host (changes after rebuild)
+      TS_IP=$(tailscale ip -4 2>/dev/null | head -1)
+      if [ -z "$TS_IP" ]; then
+        echo "WARNING: no Tailscale IP found; wmux service not created."
+        exit 0
+      fi
+      echo "Tailscale IP: $TS_IP"
+
+      # Determine nvm Node 22 bin path
+      NVM_BIN_PATH=$(sudo -u {{ construct_user }} bash -lc 'echo $NVM_BIN' 2>/dev/null)
+      if [ -z "$NVM_BIN_PATH" ]; then
+        # Fallback: find the node v22 bin under .nvm
+        NVM_BIN_PATH=$(ls -d /home/{{ construct_user }}/.nvm/versions/node/v22*/bin 2>/dev/null | head -1)
+      fi
+      echo "nvm bin path: $NVM_BIN_PATH"
+
+      # Create systemd user service directory
+      sudo -u {{ construct_user }} mkdir -p /home/{{ construct_user }}/.config/systemd/user
+
+      # Generate wmux.service with the correct Tailscale IP and nvm PATH
+      sudo -u {{ construct_user }} bash -c "cat > /home/{{ construct_user }}/.config/systemd/user/wmux.service << UNIT
+[Unit]
+Description=wmux browser terminal multiplexer
+After=network-online.target tailscaled.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/{{ construct_user }}/wmux
+Environment=NODE_ENV=development
+Environment=PATH=${NVM_BIN_PATH}:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+Environment=WMUX_HOST=${TS_IP}
+Environment=WMUX_PORT=3478
+Environment=WMUX_PUBLIC_URL=http://${TS_IP}:3478
+Environment=WMUX_HELPER_URL=http://${TS_IP}:3478
+Environment=WMUX_ALLOWED_BIND_RANGES=
+Environment=WMUX_BROWSER_AUTH_MODE=shared-or-login
+Environment=WMUX_AUTOMATION_TOKEN_PATH=
+Environment=WMUX_HELPER_TOKEN_PATH=
+Environment=WMUX_SCOPED_CREDENTIAL_TTL_MS=
+ExecStartPre=/usr/bin/env node scripts/wmux-wait-bind \${WMUX_HOST}
+ExecStart=/usr/bin/npm run dev -- --host \${WMUX_HOST} --port \${WMUX_PORT}
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=default.target
+UNIT
+"
+
+      # Reload user systemd and enable + start wmux
+      sudo -u {{ construct_user }} systemctl --user daemon-reload
+      sudo -u {{ construct_user }} systemctl --user enable --now wmux.service
+
+      echo "wmux service created and started on http://${TS_IP}:3478"
+      echo "Token: $(cat /home/{{ construct_user }}/.wmux/token 2>/dev/null)"
 
 runcmd:
   # Wait for network to be fully ready
   - timeout 60 bash -c 'until ping -c1 archive.ubuntu.com &>/dev/null; do sleep 2; done'
-  
+
   # Update package lists with retries
   - |
     for i in {1..5}; do
@@ -80,7 +213,7 @@ runcmd:
       echo "apt-get update failed, retry $i/5"
       sleep 10
     done
-  
+
   # Install base packages with retries
   - |
     for i in {1..3}; do
@@ -91,9 +224,11 @@ runcmd:
       echo "Package installation failed, retry $i/3"
       sleep 10
     done
-  
+
   - /tmp/setup-tailscale.sh
+  - /tmp/setup-dns.sh
   - /tmp/setup-dev-tools.sh
+  - /tmp/setup-wmux-service.sh
   # Temporarily enable password authentication for debugging
   - sed -i 's/^#\?PasswordAuthentication.*/PasswordAuthentication yes/' /etc/ssh/sshd_config
   - sed -i 's/^#\?PermitRootLogin.*/PermitRootLogin no/' /etc/ssh/sshd_config
@@ -106,3 +241,4 @@ final_message: |
   Construct VM is ready!
   SSH: ssh {{ construct_user }}@{{ construct_hostname }}
   Tailscale should be authenticated and connected.
+  wmux should be running on port 3478 (accessible via Tailscale IP).
