@@ -142,7 +142,7 @@ ssh speddling@100.67.178.34
 **Recommended `~/.ssh/config` entry:**
 ```text
 Host construct
-  HostName 100.67.178.34
+  HostName construct.tailea7d70.ts.net
   User speddling
 ```
 
@@ -176,8 +176,12 @@ wmux is also running as a systemd user service (`wmux.service`) on construct,
 accessible via browser over Tailscale:
 
 ```text
-http://100.67.178.34:3478/?token=6gqmWHW4xuPdu8OIwcKUmIJB4akGrL91
+http://construct.tailea7d70.ts.net:3478/?token=6gqmWHW4xuPdu8OIwcKUmIJB4akGrL91
 ```
+
+> **Tip:** You can also use `http://100.67.178.34:3478/...` (Tailscale IP) or
+> `http://construct.littlewolfacres.com:3478/...` if you configure a DNS record.
+> See [DNS Names](#dns-names) below.
 
 - **No SSH tunnel needed** — construct is directly reachable at its Tailscale IP
 - **Token** is stored in `~/.wmux/token` inside the VM
@@ -194,6 +198,30 @@ http://100.67.178.34:3478/?token=6gqmWHW4xuPdu8OIwcKUmIJB4akGrL91
 > **Dev mode**: The service runs `npm run dev` (tsx hot-reload). The pre-built
 > `dist/` is available via `npm start` for production mode if performance
 > becomes an issue.
+
+### DNS Names
+
+wmux is reachable via several DNS names, all resolving to the same Tailscale IP
+(`100.67.178.34`):
+
+| URL | How it works | Setup |
+|-----|-------------|-------|
+| `construct.tailea7d70.ts.net:3478` | Tailscale MagicDNS (automatic) | None — auto-generated |
+| `100.67.178.34:3478` | Tailscale direct IP | None |
+| `construct.littlewolfacres.com:3478` | Your custom domain | Add A record → `100.67.178.34` |
+
+**For `construct.littlewolfacres.com`:**
+- Add an **A record** (gray-cloud / DNS-only) on Cloudflare pointing to
+  `100.67.178.34` (Tailscale IP). This is only reachable from inside the
+  tailnet — the `100.x.x.x` IP is CGNAT and not publicly routable.
+- Optionally add the same A record on your local DNS (watchtower at
+  `192.168.30.11`) so `littlewolfacres.com` resolves correctly for tailnet
+  devices via the Tailscale Split DNS route.
+- **Do not** proxy (orange-cloud) the Cloudflare record — Cloudflare cannot
+  reach Tailscale IPs.
+
+The cloud-init automatically detects the Tailscale DNS name and sets it as
+`WMUX_PUBLIC_URL` in the service file. This survives IP changes across rebuilds.
 
 ### Install Additional Tools
 ```bash
@@ -337,7 +365,7 @@ top -p $(cat /var/run/construct.pid)
 
 ```bash
 # SSH via Tailscale (primary)
-ssh speddling@100.67.178.34
+ssh speddling@construct.tailea7d70.ts.net
 # or, with ~/.ssh config entry above:
 ssh construct
 
@@ -346,6 +374,9 @@ ssh -p 2222 speddling@monolith
 
 # Start wmux session
 wmux attach dev
+
+# Access wmux in browser
+#   http://construct.tailea7d70.ts.net:3478/?token=$(cat ~/.wmux/token)
 
 # Check VM status
 sudo systemctl status construct
@@ -365,9 +396,10 @@ sudo journalctl -u construct -f
 ## TODO
 
 - [ ] Configure Tailscale upstream DNS in admin console (192.168.30.11) — eliminates need for local resolv.conf fix
+- [ ] Add `construct.littlewolfacres.com` A record → `100.67.178.34` on Cloudflare (DNS-only/gray-cloud) and watchtower local DNS
+- [ ] Evaluate switching wmux from dev mode (`npm run dev`) to production mode (`npm start`) for better performance
 - [ ] Automated backup cron job (daily qcow2 snapshot to hdd-c)
 - [ ] Prometheus node_exporter inside construct
 - [ ] UFW rules on monolith (SSH port 2222 restricted to LAN + Tailscale)
-- [ ] AdGuard rewrite: `construct.littlewolfacres.com` → Tailscale IP
 - [ ] Test disaster recovery (full rebuild from playbook)
 - [ ] Evaluate SPICE for better console access vs nographic
