@@ -34,10 +34,25 @@ jobs:
       - name: Destroy existing VM (if rebuild requested)
         if: github.event.inputs.rebuild == 'true'
         run: |
+          # Stop the systemd service managing the QEMU/KVM VM
           sudo systemctl stop construct || true
+          # Wait for any remaining QEMU process to exit
+          for i in $(seq 1 10); do
+            pgrep -f "qemu.*construct" || break
+            sleep 2
+          done
+          # Force-kill any lingering QEMU process
+          sudo pkill -f "qemu.*construct" || true
+          sleep 3
+          # Unmount the LVM volume from the mount point
           sudo umount /vm/construct || true
-          sudo lvremove -f /dev/vg-root/construct || true
+          # Remove the LVM logical volume (VG is ubuntu-vg per construct-vm role defaults)
+          sudo lvremove -f /dev/ubuntu-vg/construct || true
+          # Clean up mount point and any stale artifacts
           sudo rm -rf /vm/construct
+          # Remove stale systemd service file if present
+          sudo rm -f /etc/systemd/system/construct.service
+          sudo systemctl daemon-reload || true
 
       - name: Run Ansible — Provision Construct
         working-directory: services/monolith/ansible

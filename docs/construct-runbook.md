@@ -374,13 +374,22 @@ Node.js 22+ (they use `crypto.hash()` and regex `v` flag).
 **Fix**: Node.js 22 is installed via [nvm](https://github.com/nvm-sh/nvm)
 and set as the default. The wmux systemd service sets `PATH` to use
 `~/.nvm/versions/node/v22.x/bin`. nvm init is sourced in both `.bashrc`
-and `.profile` so non-interactive shells (SSH commands, systemd) also pick up
-Node 22.
+and `.profile` with `unset npm_config_prefix` prepended — Debian 12's system
+npm sets `npm_config_prefix=/usr/local`, which breaks nvm.
 
 **For automation**: The cloud-init installs nvm, installs Node 22, and writes
 nvm init to `.bashrc`/`.profile`. If rebuilding, verify with:
 ```bash
 bash -lc 'node --version'   # should be v22.x
+```
+
+**tmux/PTY shells using wrong Node**: If wmux-spawned shells still use Node 18,
+the `npm_config_prefix=/usr/local` env var (from Debian's system npm) may be
+blocking nvm. Fix: ensure `unset npm_config_prefix` is in `.bashrc` before the
+nvm init block, and remove the old `/usr/local/bin/pi` (Node 18 install).
+Test with:
+```bash
+tmux new-session -d -s test "bash -i -c 'which node; node --version; exit'" ; sleep 2 ; cat /tmp/test  # should show v22
 ```
 
 ### Cloud-init didn't run
