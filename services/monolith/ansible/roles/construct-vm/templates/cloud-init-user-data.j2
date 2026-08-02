@@ -45,8 +45,6 @@ write_files:
       # --accept-dns=false: Tailscale tailnet has no upstream DNS resolvers
       # configured in the admin console, so its stub resolver (100.100.100.100)
       # cannot resolve public domains. We manage /etc/resolv.conf ourselves.
-      # TODO: Once upstream DNS is configured in the Tailscale admin console,
-      #       remove --accept-dns=false and delete /tmp/setup-dns.sh.
       sudo tailscale up --authkey={{ tailscale_auth_key }} \
         --accept-routes --accept-dns=false
 
@@ -79,13 +77,12 @@ write_files:
       sudo apt-get install -y gh
 
       # Install NVM for user and Node.js 22
-      # Debian 12 ships Node 18, but pi-coding-agent and wmux require Node 22+.
-      # Node 18 lacks crypto.hash() and the regex 'v' flag, causing crashes.
+      # Debian 12 ships Node 18, but pi-coding-agent and wmux require Node 20+
+      # (they use the regex 'v' flag / crypto.hash API only available in Node 22+).
       sudo -u {{ construct_user }} bash -c 'curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash'
 
       # Install Node.js 22 and set as default
       sudo -u {{ construct_user }} bash -c '
-        unset npm_config_prefix
         export NVM_DIR="$HOME/.nvm"
         [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
         nvm install 22
@@ -93,34 +90,29 @@ write_files:
         nvm use default
       '
 
-      # Ensure nvm loads in interactive AND non-interactive shells.
-      # N.B.: Debian 12's system npm sets npm_config_prefix=/usr/local, which
-      # breaks nvm ("nvm is not compatible with npm_config_prefix"). We unset it
-      # before loading nvm so Node 22 is used instead of system Node 18.
-      # .bashrc is sourced by interactive non-login bash (tmux, PTY sessions).
-      # .profile is sourced by login shells (SSH, bash -lc).
+      # Ensure nvm loads in interactive and non-interactive shells
+      # (needed for systemd user services and SSH non-interactive commands)
       sudo -u {{ construct_user }} bash -c '
-cat >> ~/.bashrc << '\''BASHRCEOF'\''
+        # .bashrc
+        grep -q "NVM_DIR" ~/.bashrc || cat >> ~/.bashrc << '\''
 
 # nvm
-unset npm_config_prefix
 export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
 [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
-BASHRCEOF
+'\''
 
-cat >> ~/.profile << '\''PROFILEEOF'\''
+        # .profile
+        grep -q "NVM_DIR" ~/.profile || cat >> ~/.profile << '\''
 
 # nvm
-unset npm_config_prefix
 export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-PROFILEEOF
+'\''
       '
 
       # Install Pi coding agent using nvm Node 22 (NOT system Node 18)
       sudo -u {{ construct_user }} bash -c '
-        unset npm_config_prefix
         export NVM_DIR="$HOME/.nvm"
         [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
         nvm use 22
@@ -129,7 +121,6 @@ PROFILEEOF
 
       # Install wmux — browser terminal multiplexer
       sudo -u {{ construct_user }} bash -c '
-        unset npm_config_prefix
         export NVM_DIR="$HOME/.nvm"
         [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
         nvm use 22
@@ -175,7 +166,7 @@ PROFILEEOF
       fi
 
       # Determine nvm Node 22 bin path
-      NVM_BIN_PATH=$(sudo -u {{ construct_user }} bash -lc 'unset npm_config_prefix; export NVM_DIR="$HOME/.nvm"; . "$NVM_DIR/nvm.sh"; echo $NVM_BIN' 2>/dev/null)
+      NVM_BIN_PATH=$(sudo -u {{ construct_user }} bash -lc 'echo $NVM_BIN' 2>/dev/null)
       if [ -z "$NVM_BIN_PATH" ]; then
         # Fallback: find the node v22 bin under .nvm
         NVM_BIN_PATH=$(ls -d /home/{{ construct_user }}/.nvm/versions/node/v22*/bin 2>/dev/null | head -1)
@@ -254,7 +245,7 @@ runcmd:
   # Redirect port 80 → 3478 on Tailscale interface for portless browser access
   # (e.g. http://construct.littlewolfacres.com instead of :3478)
   # Idempotent: skips if rule already exists.
-  - iptables -t nat -C PREROUTING -i tailscale0 -p tcp --dport 80 -j REDIRECT --to-port {{ construct_wmux_port }} 2>/dev/null || iptables -t nat -A PREROUTING -i tailscale0 -p tcp --dport 80 -j REDIRECT --to-port {{ construct_wmux_port }}
+  - iptables -t nat -C PREROUTING -i tailscale0 -p tcp --dport 80 -j REDIRECT --to-port 3478 2>/dev/null || iptables -t nat -A PREROUTING -i tailscale0 -p tcp --dport 80 -j REDIRECT --to-port 3478
   # Temporarily enable password authentication for debugging
   - sed -i 's/^#\?PasswordAuthentication.*/PasswordAuthentication yes/' /etc/ssh/sshd_config
   - sed -i 's/^#\?PermitRootLogin.*/PermitRootLogin no/' /etc/ssh/sshd_config
