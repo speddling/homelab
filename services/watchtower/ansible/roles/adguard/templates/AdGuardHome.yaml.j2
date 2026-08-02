@@ -37,6 +37,14 @@ filtering:
   # rewrite automatically -- no per-line edits here. Each answer maps to the
   # HOST the service runs on (e.g. grafana runs on watchtower; navidrome,
   # argocd, zombatron, obelisk, plane run on monolith).
+  #
+  # N.B. — Unbound's private-address rebinding protection strips 192.168.x.x,
+  # 10.x.x.x, and 172.16-31.x.x from forwarded DNS responses. So services on
+  # LAN IPs MUST have a rewrite here; otherwise Unbound will strip the IP and
+  # clients will get no answer. Tailscale IPs (100.64.x.x — CGNAT, not in any
+  # private-address range) survive forwarding, so services like construct on
+  # a Tailscale IP don't strictly need a rewrite (a Cloudflare DNS-only A
+  # record suffices). See docs/construct-runbook.md → DNS Names.
   rewrites:
     - domain: watchtower.littlewolfacres.com
       answer: {{ ip_watchtower }}
