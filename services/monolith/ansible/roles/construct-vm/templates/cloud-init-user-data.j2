@@ -223,6 +223,12 @@ write_files:
         -e "s|__NVM_BIN_PATH__|$NVM_BIN_PATH|g" \
         /tmp/wmux-service.conf > /home/{{ construct_user }}/.config/systemd/user/wmux.service
 
+      # wmux requires ~/.wmux/ to be 0700 — its DurableEndpointStore checks
+      # parent directory permissions and crashes if group/world bits are set.
+      # The directory may have been pre-created with 0755 by other processes.
+      sudo -u {{ construct_user }} mkdir -p /home/{{ construct_user }}/.wmux
+      sudo -u {{ construct_user }} chmod 700 /home/{{ construct_user }}/.wmux
+
       # Reload user systemd and enable + start wmux
       sudo -u {{ construct_user }} systemctl --user daemon-reload
       sudo -u {{ construct_user }} systemctl --user enable --now wmux.service
