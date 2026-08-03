@@ -12,6 +12,22 @@
     state: present
     update_cache: yes
 
+- name: Stop construct service before recreating disk (if running)
+  ansible.builtin.systemd:
+    name: construct
+    state: stopped
+  ignore_errors: yes
+  tags: always
+
+- name: Remove stale disk.img and cloud-init.iso (per Plane #97)
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - "{{ construct_vm_path }}/disk.img"
+    - "{{ construct_vm_path }}/cloud-init.iso"
+  tags: always
+
 - name: Create LVM logical volume for construct
   community.general.lvol:
     vg: "{{ construct_vg_name }}"
@@ -100,3 +116,11 @@
   ansible.builtin.systemd:
     name: construct
     state: started
+
+- name: Wait for QEMU process to appear
+  ansible.builtin.command: pgrep -f qemu-system-x86_64
+  register: qemu_check
+  retries: 10
+  delay: 3
+  until: qemu_check is succeeded
+  # Give the VM time to boot and run cloud-init before proceeding.

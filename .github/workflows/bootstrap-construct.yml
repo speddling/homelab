@@ -34,10 +34,28 @@ jobs:
       - name: Destroy existing VM (if rebuild requested)
         if: github.event.inputs.rebuild == 'true'
         run: |
-          sudo systemctl stop construct || true
-          sudo umount /vm/construct || true
-          sudo lvremove -f /dev/vg-root/construct || true
+          # Stop systemd service (manages QEMU via systemd)
+          sudo systemctl stop construct 2>/dev/null || true
+          sudo systemctl disable construct 2>/dev/null || true
+
+          # Kill ANY stray QEMU processes (covers manually-started VMs too)
+          for pid in $(ps aux | grep qemu-system | grep -v grep | awk '{print $2}'); do
+            sudo kill -9 $pid 2>/dev/null || true
+          done
+          sleep 2
+
+          # Unmount the construct LV if still mounted
+          sudo umount /vm/construct 2>/dev/null || true
+          sudo umount /mnt/construct-iso 2>/dev/null || true
+
+          # Remove the LVM logical volume (correct VG name per defaults: ubuntu-vg)
+          sudo lvremove -f /dev/ubuntu-vg/construct 2>/dev/null || true
+
+          # Wipe stale artifacts — per Plane #97, Ansible 'creates:' guards
+          # will skip regenerating disk.img/cloud-init.iso if they exist,
+          # so we must delete them here to force a fresh build.
           sudo rm -rf /vm/construct
+          echo 'Construct VM destroyed'
 
       - name: Run Ansible — Provision Construct
         working-directory: services/monolith/ansible
@@ -46,25 +64,30 @@ jobs:
             --vault-password-file ~/lwa-homelab/.vault_pass
 
       - name: Wait for VM to boot
-        run: sleep 60
+        run: sleep 90
 
       - name: Verify VM is running
         run: |
           echo "Checking systemd service status..."
           sudo systemctl status construct --no-pager || true
-          
+
           echo ""
-          echo "Waiting for SSH port 2222 to be accessible..."
-          timeout 30 bash -c 'until timeout 1 bash -c "</dev/tcp/localhost/2222" 2>/dev/null; do echo "  Waiting..."; sleep 2; done'
-          echo "✅ Construct VM is accessible on port 2222"
+          echo "Waiting for SSH port 2222 to be accessible (up to 3 minutes)..."
+          timeout 180 bash -c 'until timeout 1 bash -c "</dev/tcp/localhost/2222" 2>/dev/null; do echo "  Waiting..."; sleep 5; done'
+          echo "Construct VM is accessible on port 2222"
+
+          echo ""
+          echo "Verifying SSH authentication..."
+          timeout 180 bash -c 'until timeout 5 ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p 2222 speddling@127.0.0.1 "echo SSH_OK" 2>/dev/null; do echo "  Waiting for SSH auth..."; sleep 5; done'
+          echo "SSH authentication working"
 
       - name: Display connection info
         run: |
-          echo "🎉 Construct VM provisioned successfully!"
+          echo "Construct VM provisioned successfully!"
           echo ""
           echo "Connect via:"
-          echo "  ssh -p 2222 speddling@monolith  (port forward)"
+          echo "  ssh -p 2222 speddling@127.0.0.1  (port forward from monolith)"
           echo "  ssh speddling@construct         (Tailscale, once authenticated)"
           echo ""
           echo "Check Tailscale status:"
-          echo "  ssh -p 2222 speddling@monolith 'sudo tailscale status'"
+          echo "  ssh -p 2222 speddling@127.0.0.1 'sudo tailscale ip -4'  (Tailscale IP on construct)"

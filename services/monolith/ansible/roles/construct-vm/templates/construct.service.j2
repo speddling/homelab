@@ -1,10 +1,13 @@
 [Unit]
 Description=Construct Development VM
 After=network.target
+# Need LVM volume mounted at {{ construct_vm_path }} and disk.img present
+RequiresMountsFor={{ construct_vm_path }}
 
 [Service]
 Type=forking
 PIDFile=/run/construct.pid
+TimeoutStartSec=300
 ExecStart=/usr/bin/qemu-system-x86_64 \
   -enable-kvm \
   -m {{ construct_memory_mb }} \
@@ -16,10 +19,12 @@ ExecStart=/usr/bin/qemu-system-x86_64 \
   -netdev user,id=net0,hostfwd=tcp::{{ construct_ssh_port }}-:22 \
   -device virtio-net-pci,netdev=net0 \
   -display none \
+  -serial file:/tmp/construct-console.log \
   -daemonize \
   -pidfile /run/construct.pid
 
-ExecStop=/bin/kill $MAINPID
+ExecStop=/bin/kill -9 $MAINPID
+KillMode=process
 Restart=on-failure
 RestartSec=10
 

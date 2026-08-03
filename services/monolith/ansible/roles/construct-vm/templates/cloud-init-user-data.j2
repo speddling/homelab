@@ -23,7 +23,53 @@ chpasswd:
 # Package installation moved to runcmd with retry logic
 # to avoid race conditions with network initialization
 
+# --- Snippet files written via write_files (avoids YAML heredoc indentation issues) ---
 write_files:
+  - path: /tmp/nvm-bashrc.conf
+    content: |
+      # nvm
+      unset npm_config_prefix
+      export NVM_DIR="$HOME/.nvm"
+      [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+      [ -s "$NVM_DIR/bash_completion" ] && . "$NVM_DIR/bash_completion"
+
+  - path: /tmp/nvm-profile.conf
+    content: |
+      # nvm
+      unset npm_config_prefix
+      export NVM_DIR="$HOME/.nvm"
+      [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+
+  - path: /tmp/wmux-service.conf
+    content: |
+      [Unit]
+      Description=wmux browser terminal multiplexer
+      After=network-online.target tailscaled.service
+      Wants=network-online.target
+
+      [Service]
+      Type=simple
+      WorkingDirectory=/home/{{ construct_user }}/wmux
+      Environment=NODE_ENV=development
+      Environment=PATH=__NVM_BIN_PATH__:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+      Environment=WMUX_HOST=__TS_IP__
+      Environment=WMUX_PORT={{ construct_wmux_port }}
+      Environment=WMUX_PUBLIC_URL=__WMUX_BASE__
+      Environment=WMUX_ALLOWED_BIND_RANGES=
+      Environment=WMUX_ALLOWED_HOSTS={{ construct_wmux_allowed_hosts | default("") }}
+      Environment=WMUX_BROWSER_AUTH_MODE=shared-or-login
+      Environment=WMUX_AUTOMATION_TOKEN_PATH=
+      Environment=WMUX_HELPER_TOKEN_PATH=
+      Environment=WMUX_SCOPED_CREDENTIAL_TTL_MS=
+      ExecStartPre=/usr/bin/env node scripts/wmux-wait-bind ${WMUX_HOST}
+      ExecStart=/usr/bin/npm run dev -- --host ${WMUX_HOST} --port ${WMUX_PORT}
+      Restart=on-failure
+      RestartSec=2
+
+      [Install]
+      WantedBy=default.target
+
+  # --- Shell scripts ---
   - path: /tmp/setup-tailscale.sh
     permissions: '0755'
     content: |
@@ -90,26 +136,20 @@ write_files:
         nvm use default
       '
 
-      # Ensure nvm loads in interactive and non-interactive shells
-      # (needed for systemd user services and SSH non-interactive commands)
-      sudo -u {{ construct_user }} bash -c '
-        # .bashrc
-        grep -q "NVM_DIR" ~/.bashrc || cat >> ~/.bashrc << '\''
-
-# nvm
-export NVM_DIR="$HOME/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
-'\''
-
-        # .profile
-        grep -q "NVM_DIR" ~/.profile || cat >> ~/.profile << '\''
-
-# nvm
-export NVM_DIR="$HOME/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-'\''
-      '
+      # Ensure nvm loads in interactive AND non-interactive shells.
+      # N.B.: Debian 12 system npm sets npm_config_prefix=/usr/local, which
+      # breaks nvm ("nvm is not compatible with npm_config_prefix"). We unset it
+      # before loading nvm so Node 22 is used instead of system Node 18.
+      # .bashrc is sourced by interactive non-login bash (tmux, PTY sessions).
+      # .profile is sourced by login shells (SSH, bash -lc).
+      # N.B.: These snippet files were written by write_files above to avoid
+      # YAML heredoc indentation issues (column-0 heredoc content breaks YAML
+      # block scalar parsing).
+      # Idempotency: grep -q prevents duplicate appends on re-runs.
+      grep -q "NVM_DIR" /home/{{ construct_user }}/.bashrc || \
+        sudo -u {{ construct_user }} cat /tmp/nvm-bashrc.conf >> /home/{{ construct_user }}/.bashrc
+      grep -q "NVM_DIR" /home/{{ construct_user }}/.profile || \
+        sudo -u {{ construct_user }} cat /tmp/nvm-profile.conf >> /home/{{ construct_user }}/.profile
 
       # Install Pi coding agent using nvm Node 22 (NOT system Node 18)
       sudo -u {{ construct_user }} bash -c '
@@ -176,37 +216,18 @@ export NVM_DIR="$HOME/.nvm"
       # Create systemd user service directory
       sudo -u {{ construct_user }} mkdir -p /home/{{ construct_user }}/.config/systemd/user
 
-      # Generate wmux.service with the correct Tailscale IP and nvm PATH
-      sudo -u {{ construct_user }} bash -c "cat > /home/{{ construct_user }}/.config/systemd/user/wmux.service << UNIT
-[Unit]
-Description=wmux browser terminal multiplexer
-After=network-online.target tailscaled.service
-Wants=network-online.target
+      # Generate wmux.service from template, replacing placeholders
+      sudo -u {{ construct_user }} sed \
+        -e "s|__TS_IP__|$TS_IP|g" \
+        -e "s|__WMUX_BASE__|$WMUX_BASE|g" \
+        -e "s|__NVM_BIN_PATH__|$NVM_BIN_PATH|g" \
+        /tmp/wmux-service.conf > /home/{{ construct_user }}/.config/systemd/user/wmux.service
 
-[Service]
-Type=simple
-WorkingDirectory=/home/{{ construct_user }}/wmux
-Environment=NODE_ENV=development
-Environment=PATH=${NVM_BIN_PATH}:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-Environment=WMUX_HOST=${TS_IP}
-Environment=WMUX_PORT={{ construct_wmux_port }}
-Environment=WMUX_PUBLIC_URL=${WMUX_BASE}
-Environment=WMUX_HELPER_URL=http://${TS_IP}:{{ construct_wmux_port }}
-Environment=WMUX_ALLOWED_BIND_RANGES=
-Environment=WMUX_ALLOWED_HOSTS={{ construct_wmux_allowed_hosts | default("") }}
-Environment=WMUX_BROWSER_AUTH_MODE=shared-or-login
-Environment=WMUX_AUTOMATION_TOKEN_PATH=
-Environment=WMUX_HELPER_TOKEN_PATH=
-Environment=WMUX_SCOPED_CREDENTIAL_TTL_MS=
-ExecStartPre=/usr/bin/env node scripts/wmux-wait-bind \${WMUX_HOST}
-ExecStart=/usr/bin/npm run dev -- --host \${WMUX_HOST} --port \${WMUX_PORT}
-Restart=on-failure
-RestartSec=2
-
-[Install]
-WantedBy=default.target
-UNIT
-"
+      # wmux requires ~/.wmux/ to be 0700 — its DurableEndpointStore checks
+      # parent directory permissions and crashes if group/world bits are set.
+      # The directory may have been pre-created with 0755 by other processes.
+      sudo -u {{ construct_user }} mkdir -p /home/{{ construct_user }}/.wmux
+      sudo -u {{ construct_user }} chmod 700 /home/{{ construct_user }}/.wmux
 
       # Reload user systemd and enable + start wmux
       sudo -u {{ construct_user }} systemctl --user daemon-reload
@@ -233,7 +254,8 @@ runcmd:
       DEBIAN_FRONTEND=noninteractive apt-get install -y \
         curl wget git vim tmux jq build-essential \
         python3 python3-pip nodejs npm golang \
-        htop net-tools ca-certificates gnupg lsb-release iptables-persistent \ && break
+        htop net-tools ca-certificates gnupg lsb-release iptables-persistent \
+        && break
       echo "Package installation failed, retry $i/3"
       sleep 10
     done
@@ -258,5 +280,5 @@ final_message: |
   Construct VM is ready!
   SSH: ssh {{ construct_user }}@{{ construct_hostname }}
   Tailscale should be authenticated and connected.
-  wmux should be running on port 3478 (accessible via Tailscale IP).
+  wmux should be running on port {{ construct_wmux_port }} (accessible via Tailscale IP).
   Browser access: http://construct.littlewolfacres.com/?token=$(cat ~/.wmux/token)
