@@ -1,10 +1,10 @@
 # LWA Infra -- Construct Runbook
-> Last updated: 2026-08-01
+> Last updated: 2026-08-04
 
-**Host:** monolith (`192.168.30.10`)
+**Host:** Monolith (`100.127.193.14`, Tailscale)
 **Guest:** Debian 12 (Bookworm)
-**SSH (Tailscale):** `speddling@100.67.178.34` (Tailscale name: `construct-1`)
-**SSH (port forward):** `ssh -p 2222 speddling@monolith` → `construct:22`
+**SSH (Tailscale):** `speddling@100.95.178.6` (Tailscale name: `construct`)
+**SSH (port forward):** `ssh -p 2222 speddling@100.127.193.14` → `construct:22`
 **User:** `speddling` (sudo)
 
 ---
@@ -43,23 +43,23 @@ sudo systemctl stop construct
   -drive file=/vm/construct/cloud-init.iso,media=cdrom,readonly=on \
   -netdev user,id=net0,hostfwd=tcp::2222-:22 \
   -device virtio-net-pci,netdev=net0 \
-  -nographic \
-  -serial mon:stdio \
+  -display none \
+  -serial file:/tmp/construct-console.log \
   -daemonize \
-  -pidfile /var/run/construct.pid
+  -pidfile /run/construct.pid
 ```
 
 ---
 
 ## Storage
 
-All on NVMe boot drive LVM:
+All on NVMe boot drive LVM (`/dev/ubuntu-vg` on `/dev/nvme0n1p3`):
 
 | Path | Size | Purpose |
 |---|---|---|
-| `/dev/vg-root/construct` | 80G LV | Mounted at `/vm/construct` |
-| `/vm/construct/disk.img` | 80G qcow2 | Guest OS disk (grows dynamically) |
-| `/vm/construct/debian-12-generic-amd64.qcow2` | ~500MB | Base cloud image (permanent artifact) |
+| `/dev/ubuntu-vg/construct` | 80G LV | Mounted at `/vm/construct` |
+| `/vm/construct/disk.img` | 3.4G qcow2 | Guest OS disk (grows dynamically) |
+| `/vm/construct/debian-12-generic-amd64.qcow2` | 427M | Base cloud image (permanent artifact) |
 | `/vm/construct/cloud-init.iso` | ~50KB | Cloud-init data (regenerated on provision) |
 
 **Actual disk usage:** Check with `sudo qemu-img info /vm/construct/disk.img`
@@ -136,7 +136,7 @@ sudo systemctl restart construct
 
 ### Via Tailscale (Primary)
 ```bash
-ssh speddling@100.67.178.34
+ssh speddling@100.95.178.6
 ```
 
 **Recommended `~/.ssh/config` entry:**
@@ -151,13 +151,16 @@ Then you can use:
 ssh construct
 ```
 
-> **Note:** Tailscale assigns a new machine identity on disk rebuild. The old IP `100.73.168.20` (`construct`) went offline after the rebuild; the live IP is now `100.67.178.34` (`construct-1`).
+> **Note:** After the latest rebuild (2026-08-04), the old Tailscale node
+> (`construct` at IP `100.67.178.34`) was deleted and the rebuilt VM was
+> renamed to `construct` (IP `100.95.178.6`). Tailscale assigns a new machine
+> identity on disk rebuild, so the node key changes each time.
 
 
 ### Via Port Forward (Fallback)
 If Tailscale is down or not yet authenticated:
 ```bash
-ssh -p 2222 speddling@monolith
+ssh -p 2222 speddling@100.127.193.14
 ```
 
 Host port 2222 forwards to construct's port 22.
@@ -176,10 +179,10 @@ wmux is also running as a systemd user service (`wmux.service`) on construct,
 accessible via browser over Tailscale:
 
 ```text
-http://construct.tailea7d70.ts.net:3478/?token=6gqmWHW4xuPdu8OIwcKUmIJB4akGrL91
+http://construct.tailea7d70.ts.net:3478/?token=QatyoM5m45aVPvai6pNNk0UWSHQl487c
 ```
 
-> **Tip:** You can also use `http://100.67.178.34:3478/...` (Tailscale IP) or
+> **Tip:** You can also use `http://100.95.178.6:3478/...` (Tailscale IP) or
 > `http://construct.littlewolfacres.com:3478/...` if you configure a DNS record.
 > See [DNS Names](#dns-names) below.
 
@@ -226,17 +229,17 @@ This is already handled by the cloud-init template (variable:
 ### DNS Names
 
 wmux is reachable via several DNS names, all resolving to the same Tailscale IP
-(`100.67.178.34`):
+(`100.95.178.6`):
 
 | URL | How it works | Setup |
 |-----|-------------|-------|
 | `construct.tailea7d70.ts.net:3478` | Tailscale MagicDNS (automatic) | None — auto-generated |
-| `100.67.178.34:3478` | Tailscale direct IP | None |
-| `construct.littlewolfacres.com:3478` | Your custom domain | Add A record → `100.67.178.34` |
+| `100.95.178.6:3478` | Tailscale direct IP | None |
+| `construct.littlewolfacres.com:3478` | Your custom domain | Add A record → `100.95.178.6` |
 
 **For `construct.littlewolfacres.com`:**
 - Add an **A record** (gray-cloud / DNS-only) on Cloudflare pointing to
-  `100.67.178.34` (Tailscale IP). This is only reachable from inside the
+  `100.95.178.6` (Tailscale IP). This is only reachable from inside the
   tailnet — the `100.x.x.x` IP is CGNAT and not publicly routable.
 - Optionally add the same A record on your local DNS (watchtower at
   `192.168.30.11`) so `littlewolfacres.com` resolves correctly for tailnet
@@ -261,7 +264,7 @@ This rule is idempotent (skips if already present) and persists across reboots v
 `iptables-persistent` (installed as an apt package in cloud-init). It only applies
 to traffic arriving via the Tailscale interface — localhost traffic is unaffected.
 
-**Browser URL**: `http://construct.littlewolfacres.com/?token=6gqmWHW4xuPdu8OIwcKUmIJB4akGrL91`
+**Browser URL**: `http://construct.littlewolfacres.com/?token=QatyoM5m45aVPvai6pNNk0UWSHQl487c`
 
 ### Install Additional Tools
 ```bash
@@ -282,7 +285,7 @@ npm update -g @earendil-works/pi-coding-agent
 ### Expand Disk (if needed)
 1. Grow the LV on monolith:
    ```bash
-   sudo lvextend -L +20G /dev/vg-root/construct
+   sudo lvextend -L +20G /dev/ubuntu-vg/construct
    ```
 
 2. Grow the qcow2 image:
@@ -328,7 +331,7 @@ sudo journalctl -u construct -f
 ### Can't SSH via Tailscale
 1. Check Tailscale status inside the VM (via port forward):
    ```bash
-   ssh -p 2222 speddling@monolith
+   ssh -p 2222 speddling@100.127.193.14
    sudo tailscale status
    ```
 
@@ -377,16 +380,44 @@ and set as the default. The wmux systemd service sets `PATH` to use
 and `.profile` so non-interactive shells (SSH commands, systemd) also pick up
 Node 22.
 
+> **Note:** Debian 12's system npm sets `npm_config_prefix=/usr/local`, which
+> breaks nvm ("nvm is not compatible with npm_config_prefix"). The cloud-init
+> template unsets this in the nvm init snippets written to `.bashrc`/`.profile`.
+
 **For automation**: The cloud-init installs nvm, installs Node 22, and writes
 nvm init to `.bashrc`/`.profile`. If rebuilding, verify with:
 ```bash
 bash -lc 'node --version'   # should be v22.x
 ```
 
+### wmux Service Crash Loop (durable endpoint parent directory must be owner-only)
+
+**Symptom**: wmux service crashes on startup with
+`durable endpoint parent directory must be owner-only` and restarts in a loop
+(restart counter climbs rapidly).
+
+**Root cause**: wmux's `DurableEndpointStore` checks that the `~/.wmux/`
+directory has mode `0700` (owner-only). If the directory was pre-created by
+another process with `0755` permissions (the default under umask 022), wmux
+refuses to start. The `ensureSecureParent()` check creates the directory if
+it doesn't exist, but does **not** chmod it if it already exists with wrong
+permissions.
+
+**Fix** (on construct VM):
+```bash
+chmod 700 ~/.wmux
+systemctl --user restart wmux.service
+```
+
+**Permanent fix**: The cloud-init template (`cloud-init-user-data.j2`) now
+includes `mkdir -p + chmod 700 ~/.wmux` in the `setup-wmux-service.sh` script
+before starting the service. This ensures correct permissions even if the
+directory was pre-created by an earlier process.
+
 ### Cloud-init didn't run
 Check cloud-init logs inside construct:
 ```bash
-ssh -p 2222 speddling@monolith
+ssh -p 2222 speddling@100.127.193.14
 sudo cloud-init status
 sudo cat /var/log/cloud-init.log
 sudo cat /var/log/cloud-init-output.log
@@ -410,7 +441,7 @@ ssh speddling@construct.tailea7d70.ts.net
 ssh construct
 
 # SSH via port forward (fallback)
-ssh -p 2222 speddling@monolith
+ssh -p 2222 speddling@100.127.193.14
 
 # Start wmux session
 wmux attach dev
@@ -436,10 +467,10 @@ sudo journalctl -u construct -f
 ## TODO
 
 - [ ] Configure Tailscale upstream DNS in admin console (192.168.30.11) — eliminates need for local resolv.conf fix
-- [ ] Add `construct.littlewolfacres.com` A record → `100.67.178.34` on Cloudflare (DNS-only/gray-cloud) and watchtower local DNS
+- [ ] Add `construct.littlewolfacres.com` A record → `100.95.178.6` on Cloudflare (DNS-only/gray-cloud) and watchtower local DNS
 - [ ] Evaluate switching wmux from dev mode (`npm run dev`) to production mode (`npm start`) for better performance
 - [ ] Automated backup cron job (daily qcow2 snapshot to hdd-c)
 - [ ] Prometheus node_exporter inside construct
-- [ ] UFW rules on monolith (SSH port 2222 restricted to LAN + Tailscale)
+- [ ] UFW rules on Monolith (SSH port 2222 restricted to LAN + Tailscale)
 - [ ] Test disaster recovery (full rebuild from playbook)
-- [ ] Evaluate SPICE for better console access vs nographic
+- [ ] Evaluate serial console access (`/tmp/construct-console.log`) for better debugging vs -nographic
