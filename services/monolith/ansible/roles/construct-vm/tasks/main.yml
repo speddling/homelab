@@ -26,6 +26,7 @@
   loop:
     - "{{ construct_vm_path }}/disk.img"
     - "{{ construct_vm_path }}/cloud-init.iso"
+    - "{{ construct_vm_path }}/disk-test.img"
   tags: always
 
 - name: Create LVM logical volume for construct
