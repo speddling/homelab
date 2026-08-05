@@ -108,7 +108,7 @@ Four MCP servers give Claude structured, safe access to the infrastructure:
 
 **Synapse** (`monolith:30800`) - read-only k3s pod state, Prometheus metrics, Alertmanager alerts, and monolith filesystem.
 
-**Scribe** (`apex:8765`) - git control plane. Branch, commit, push, open PRs. Branch-protected, path-allowlisted, merged-PR guard built in.
+**Scribe** (`construct:8765`, forwarded via `monolith:2222:8765`) - git control plane. Branch, commit, push, open PRs. Branch-protected, path-allowlisted, merged-PR guard built in.
 
 **Argus** (`watchtower:9800`) - read-only live Alertmanager and Prometheus configs, systemd state, journald logs, and monitoring HTTP APIs.
 

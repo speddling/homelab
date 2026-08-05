@@ -2,18 +2,29 @@ name: Deploy Firecrawl
 
 on:
   push:
+    branches: [master]
     paths:
       - "services/firecrawl/**"
       - "kubernetes/apps/firecrawl.yaml"
+  workflow_dispatch:
 
 jobs:
-  trigger-sync:
-    runs-on: ubuntu-latest
+  deploy:
+    name: Deploy
+    runs-on: [self-hosted, monolith]
     steps:
-      - name: Trigger ArgoCD Sync
-        uses: actions/http-client@v1
-        with:
-          url: ${{ secrets.ARGOCD_WEBHOOK_URL }}
-          method: POST
-          headers: '{"Content-Type": "application/json"}'
-          body: '{"application": "firecrawl", "revision": "${{ github.sha }}"}'
+      - uses: actions/checkout@v4
+
+      - name: Apply Kubernetes manifests
+        run: |
+          kubectl apply -f services/firecrawl/kubernetes/
+
+      - name: Verify deployment
+        run: |
+          echo "Checking namespace and pods..."
+          kubectl get namespace firecrawl
+          kubectl get pods -n firecrawl
+          echo "Checking services..."
+          kubectl get svc -n firecrawl
+          echo "Checking ingress..."
+          kubectl get ingress -n firecrawl
