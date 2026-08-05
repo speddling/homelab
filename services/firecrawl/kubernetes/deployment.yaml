@@ -33,6 +33,16 @@ spec:
             - secretRef:
                 name: firecrawl-secret
           env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: firecrawl-secret
+                  key: DATABASE_URL
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: firecrawl-secret
+                  key: OPENAI_API_KEY
             - name: IS_KUBERNETES
               value: "true"
             - name: NODE_ENV
