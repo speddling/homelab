@@ -11,10 +11,8 @@ spec:
   project: default
   source:
     repoURL: https://github.com/speddling/lwa-infra
-    targetRevision: HEAD
+    targetRevision: master
     path: services/firecrawl/kubernetes
-    directory:
-      recurse: true
   destination:
     server: https://kubernetes.default.svc
     namespace: firecrawl
@@ -23,5 +21,4 @@ spec:
       prune: true
       selfHeal: true
     syncOptions:
-      - CreateNamespace: true
-      - ApplyOutOfSyncOnly: true
+      - CreateNamespace=true
