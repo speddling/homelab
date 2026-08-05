@@ -115,3 +115,4 @@ Four MCP servers give Claude structured, safe access to the infrastructure:
 Plane itself (`plane.littlewolfacres.com`) is the accountability layer underneath all of this. Every client obligation, upgrade, and piece of operational debt is a tracked ticket there. This repo describes what is running; Plane is the record of what is owed.
 
 **B-4** - local LLM inference via Ollama on apex (Metal backend).
+# Verify gh auth from construct
