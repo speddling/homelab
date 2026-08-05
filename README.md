@@ -37,17 +37,17 @@ Local domain: `littlewolfacres.com`, all hosts resolve as `hostname.littlewolfac
 - **Project Management** - Plane (self-hosted), tracks operational work items, client obligations, and incidents
 - **TLS** - cert-manager v1.20.2, automatic Let's Encrypt certificates via Cloudflare DNS-01
 - **Ingress** - Traefik (k3s default), terminates TLS and routes to cluster services
-- **IaC** - Terraform Cloud (multi-workspace: monolith, watchtower)
+- **IaC** - Ansible (Terraform Cloud used for state isolation only — monolith, watchtower workspaces track Terraform state, no resource declarations)
 - **Automation** - GitHub Actions + Ansible (modular role structure)
 - **Secrets** - Ansible Vault
-- **Monitoring** - Prometheus, Grafana, Alertmanager, Loki, Promtail, Netdata, node_exporter, blackbox_exporter, snmp_exporter, adguard_exporter, tmobile_exporter (custom), reolink_exporter (custom)
+- **Monitoring** - Prometheus, Grafana, Alertmanager, Loki, Promtail, Netdata, node_exporter, blackbox_exporter, snmp_exporter, adguard_exporter, tmobile_exporter (custom), reolink_exporter (custom), NUT (planned)
 - **OS** - Ubuntu Server 24.04 LTS (monolith + watchtower), macOS Sequoia (apex)
 
 ## CI/CD
 
 GitHub Actions pipelines on self-hosted runners (monolith, watchtower). All changes go through **branch -> PR -> merge**. Direct pushes to `master` are disabled. Claude handles the full git workflow via **Scribe**.
 
-ArgoCD is not a GitHub Actions workflow. It is a continuously-running GitOps controller that manages 8 services on the cluster, reconciling their live state against this repo on every push to master. It lives in the Stack section above.
+ArgoCD is not a GitHub Actions workflow. It is a continuously-running GitOps controller that manages 10 services on the cluster, reconciling their live state against this repo on every push to master. It lives in the Stack section above.
 
 Services running locally on apex are deployed manually via Ansible since it is my Dev laptop and inbound SSH is blocked.
 
@@ -55,13 +55,23 @@ Services running locally on apex are deployed manually via Ansible since it is m
 |---|---|---|
 | `deploy-watchtower.yml` | Push to master | DNS, monitoring, exporters, Loki/Promtail |
 | `deploy-monolith.yml` | Push to master | Firewall, monitoring agents, Tailscale |
-| `deploy-synapse.yml` | Push to master | Synapse MCP server |
+| `deploy-synapse.yml` | Push to master | Build + push image, deploy to k3s |
 | `deploy-fileserver.yml` | Manual | Samba config |
+| `deploy-navidrome.yml` | Manual | Storage config + k8s manifests (also via ArgoCD) |
+| `deploy-jellyfin.yml` | Manual | Storage config + k8s manifests (also via ArgoCD) |
+| `deploy-kavita.yml` | Manual | Storage config + k8s manifests (also via ArgoCD) |
+| `deploy-k3s-manifests.yml` | Push to master | kube-state-metrics (direct kubectl, not ArgoCD) |
+| `deploy-mirror.yml` | Push to master | hdd-c -> hdd-d nightly rsync |
+| `deploy-omada.yml` | PR + manual | Omada controller state export (read-only introspection) |
+| `deploy-reolink-exporter.yml` | Push to master | Reolink NVR exporter |
+| `deploy-tmobile-exporter.yml` | Push to master | T-Mobile gateway exporter |
 | `rotate-argocd-credentials.yml` | Manual + quarterly | PAT rotation |
 | `import-minecraft-world.yml` | Manual | Stage world via Ansible and bounce pod |
 | `slack-minecraft-import.yml` | Zombatron Importer bot | Clear import marker and bounce pod |
 | `bootstrap-argocd.yml` | Manual (once) | cert-manager + ArgoCD install |
 | `bootstrap-construct.yml` | Manual (once) | Debian 12 dev VM provisioning |
+| `bootstrap-kubevirt.yml` | Manual (once) | KubeVirt + Obelisk VM bootstrap (archived) |
+| `bootstrap-plane.yml` | Push + manual | Plane secrets + TLS certificate |
 | `provision-k3s.yml` | Manual | k3s cluster init |
 
 ## Services
@@ -70,6 +80,8 @@ Services running locally on apex are deployed manually via Ansible since it is m
 |---|---|---|
 | ArgoCD | monolith | GitOps controller, manages all k3s workloads |
 | Navidrome | monolith | Music streaming |
+| Jellyfin | monolith | Media streaming |
+| Kavita | monolith | eBook/comic library |
 | Minecraft Bedrock | monolith | Family Minecraft server |
 | Samba | monolith | Network file shares |
 | Obelisk (Win11 VM) | monolith | Client-facing Windows environment, RDP |
@@ -82,6 +94,7 @@ Services running locally on apex are deployed manually via Ansible since it is m
 | Loki | watchtower | Log aggregation |
 | Promtail | watchtower | Log shipping agent |
 | Netdata | watchtower | Real-time system monitoring |
+| NUT | watchtower | UPS monitoring (CyberPower CP1000PFCLCD) |
 | Synapse MCP | monolith | Claude infrastructure read access |
 | Scribe MCP | apex | Claude git control plane |
 | Argus MCP | watchtower | Claude monitoring read access |
