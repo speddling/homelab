@@ -47,9 +47,9 @@ Local domain: `littlewolfacres.com`, all hosts resolve as `hostname.littlewolfac
 
 GitHub Actions pipelines on self-hosted runners (monolith, watchtower). All changes go through **branch -> PR -> merge**. Direct pushes to `master` are disabled. Claude handles the full git workflow via **Scribe**.
 
-ArgoCD is not a GitHub Actions workflow. It is a continuously-running GitOps controller that manages 10 services on the cluster, reconciling their live state against this repo on every push to master. It lives in the Stack section above.
+ArgoCD is not a GitHub Actions workflow. It is a continuously-running GitOps controller that manages 11 services on the cluster, reconciling their live state against this repo on every push to master. It lives in the Stack section above.
 
-Services running locally on apex are deployed manually via Ansible since it is my Dev laptop and inbound SSH is blocked.
+Services running locally on Construct VM (Debian 12 on Monolith) are deployed via the `deploy-synapse.yml` workflow. Services formerly on apex (Scribe MCP, Zombatron Importer) have migrated to Construct and are now in `services/construct/ansible/`.
 
 | Workflow | Trigger | What it does |
 |---|---|---|
@@ -63,6 +63,7 @@ Services running locally on apex are deployed manually via Ansible since it is m
 | `deploy-k3s-manifests.yml` | Push to master | kube-state-metrics (direct kubectl, not ArgoCD) |
 | `deploy-mirror.yml` | Push to master | hdd-c -> hdd-d nightly rsync |
 | `deploy-omada.yml` | PR + manual | Omada controller state export (read-only introspection) |
+| `deploy-firecrawl.yml` | Push to services/firecrawl/** | Firecrawl web scraping API manifests |
 | `deploy-reolink-exporter.yml` | Push to master | Reolink NVR exporter |
 | `deploy-tmobile-exporter.yml` | Push to master | T-Mobile gateway exporter |
 | `rotate-argocd-credentials.yml` | Manual + quarterly | PAT rotation |
@@ -87,6 +88,7 @@ Services running locally on apex are deployed manually via Ansible since it is m
 | Obelisk (Win11 VM) | monolith | Client-facing Windows environment, RDP |
 | Construct (Debian 12 VM) | monolith | Persistent development environment via Tailscale + wmux |
 | Plane | monolith | Project management and incident tracking |
+| Firecrawl | monolith | Web scraping and extraction API |
 | AdGuard Home + Unbound | watchtower | Recursive DNS with ad and tracker blocking |
 | Prometheus | watchtower | Metrics collection |
 | Grafana | watchtower | Metrics dashboards |
@@ -96,9 +98,9 @@ Services running locally on apex are deployed manually via Ansible since it is m
 | Netdata | watchtower | Real-time system monitoring |
 | NUT | watchtower | UPS monitoring (CyberPower CP1000PFCLCD) |
 | Synapse MCP | monolith | Claude infrastructure read access |
-| Scribe MCP | apex | Claude git control plane |
+| Scribe MCP | monolith (Construct VM) | Claude git control plane |
 | Argus MCP | watchtower | Claude monitoring read access |
-| Zombatron Importer | apex | Slack bot for Minecraft world imports |
+| Zombatron Importer | monolith (Construct VM) | Slack bot for Minecraft world imports |
 
 ## AI Tooling
 
@@ -106,7 +108,7 @@ Four MCP servers give Claude structured, safe access to the infrastructure:
 
 **Synapse** (`monolith:30800`) - read-only k3s pod state, Prometheus metrics, Alertmanager alerts, and monolith filesystem.
 
-**Scribe** (`apex:8765`) - git control plane. Branch, commit, push, open PRs. Branch-protected, path-allowlisted, merged-PR guard built in.
+**Scribe** (`construct:8765`, forwarded via `monolith:2222:8765`) - git control plane. Branch, commit, push, open PRs. Branch-protected, path-allowlisted, merged-PR guard built in.
 
 **Argus** (`watchtower:9800`) - read-only live Alertmanager and Prometheus configs, systemd state, journald logs, and monitoring HTTP APIs.
 

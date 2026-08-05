@@ -1,0 +1,27 @@
+# Firecrawl — self-hosted web scraping and extraction API
+# Managed by ArgoCD via apps-of-apps pattern. All manifests in services/firecrawl/kubernetes/
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: firecrawl
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/speddling/lwa-infra
+    targetRevision: HEAD
+    path: services/firecrawl/kubernetes
+    directory:
+      recurse: true
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: firecrawl
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace: true
+      - ApplyOutOfSyncOnly: true

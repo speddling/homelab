@@ -364,15 +364,15 @@ Named for the workspace itself — both ended up called "atlas" independently (t
 
 **No custom guardrails.** Synapse is read-only by RBAC. Argus is read-only by design. Scribe refuses to operate on `master`/`main` at the Python level. Atlas has none of that — it's a thin wrapper around Plane's REST API using a Personal Access Token with the same permissions as the account that generated it. `delete_project` and `delete_work_item` are real, unguarded tools. There is no branch-protection-equivalent here.
 
-**Local subprocess, not a deployed service.** Synapse/Scribe/Argus are long-running services on dedicated hosts with their own systemd/launchd units, UFW rules, and `docs/runbook.md` health-check commands. Atlas is spawned directly by Claude Desktop on apex via `uvx` and exits when Desktop closes — there's no host to check `systemctl status` on, no port to scan, nothing to deploy.
+**Local subprocess, not a deployed service.** Synapse/Scribe/Argus are long-running services on dedicated hosts with their own systemd/launchd units, UFW rules, and health-check commands defined in their respective service READMEs and runbooks (see `docs/cluster-runbook.md` for the general pattern). Atlas is spawned directly by Claude Desktop on apex via `uvx` and exits when Desktop closes — there's no host to check `systemctl status` on, no port to scan, nothing to deploy.
 
-**Auth is a bearer credential in plain env vars**, not a dedicated system user with no shell. Treat `PLANE_API_KEY` like any other credential — see `homelab-todo.md` → GitHub PAT Audit section for the rotation-discipline pattern this should probably follow eventually.
+**Auth is a bearer credential in plain env vars**, not a dedicated system user with no shell. Treat `PLANE_API_KEY` like any other credential — see the `homelab-state.md` → Network → DNS section for the rotation-discipline pattern this should probably follow eventually.
 
 ### DNS Dependency (apex-specific gotcha)
 
 Apex does not use AdGuard Home as its DNS resolver by default, so `plane.littlewolfacres.com` doesn't resolve there out of the box — discovered when Atlas's first call failed with a `NameResolutionError`, even though the hostname already worked fine from AdGuard-resolved LAN clients. `curl` can work around this per-call with `--resolve`, but a long-running stdio subprocess can't — it needs the hostname to resolve correctly at the OS level, every time, with no per-call override available.
 
-Fixed via a public Cloudflare A record pointing directly at the internal LAN IP (DNS-only / grey cloud) — see `docs/runbook.md` → DNS → **Internal-Only Services (No Public Port-Forward)** for the general pattern and why it differs from the WAN-IP approach used for externally-reachable services.
+Fixed via a public Cloudflare A record pointing directly at the internal LAN IP (DNS-only / grey cloud) — see `docs/cluster-runbook.md` for the general pattern and why it differs from the WAN-IP approach used for externally-reachable services.
 
 ### Setup
 

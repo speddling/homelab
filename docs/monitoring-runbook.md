@@ -572,7 +572,7 @@ curl -s 'http://192.168.30.11:9090/api/v1/query?query=argocd_app_info' | python3
 See the **Active Prometheus alert rules** table above for the five ArgoCD alerts
 (`ArgoCDAppOutOfSync`, `ArgoCDAppDegraded`, `ArgoCDAppMissing`, `ArgoCDControllerDown`,
 `ArgoCDServerDown`). For credential rotation and GitOps operations generally, see
-`docs/homelab-state.md` → ArgoCD and `docs/runbook.md`.
+`docs/homelab-state.md` → ArgoCD.
 
 ---
 
