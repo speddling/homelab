@@ -5,10 +5,7 @@
 # live, api, worker, beat-worker) survived an OOMKill fix, a TLS
 # misconfiguration, a missing secret key, and a Jinja2 templating bug
 # upstream of this file — manual sync was the right call for that first
-# boot, not for steady-state operation afterward. See
-# docs/plane-deployment-plan.md for the full design and bootstrap
-# sequence, and PRs #142/#144/#145/#146/#147 for what got fixed along
-# the way.
+# boot, not for steady-state operation afterward.
 #
 # Secret field names confirmed via `helm show values makeplane/plane-ce`:
 # a top-level `external_secrets:` map takes the literal NAME of a

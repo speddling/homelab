@@ -440,8 +440,7 @@ Key metrics produced:
 A commented scrape job stub already exists in `prometheus.yml.j2` for the outdoor AP
 (garage / future livestock area). SG2218P is now live (`snmp-sg2218p`). Once the
 outdoor AP is installed and assigned an IP, set `ip_eap_out` in `ansible/vars/main.yml`
-and uncomment the `snmp-eap-out` job. See `docs/network-migration-runbook.md` for the
-full VLAN migration this is part of.
+and uncomment the `snmp-eap-out` job. Track the full VLAN migration in Plane.
 
 > **Naming note:** SNMP job/var names for the APs are location-based (`snmp-eap-up`,
 > `snmp-eap-down`, `ip_eap_up`, `ip_eap_down`) rather than tied to the current EAP245
