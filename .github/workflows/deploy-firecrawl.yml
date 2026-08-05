@@ -25,12 +25,35 @@ jobs:
           kubectl apply -f services/firecrawl/kubernetes/deployment.yaml
           kubectl apply -f services/firecrawl/kubernetes/ingress.yaml
 
+      - name: Wait for pods to stabilize
+        run: |
+          echo "Waiting for pods to stabilize..."
+          sleep 30
+
       - name: Verify deployment
         run: |
-          echo "Checking namespace and pods..."
+          echo "=== Namespace ==="
           kubectl get namespace firecrawl
+          echo ""
+          echo "=== Pods ==="
           kubectl get pods -n firecrawl
-          echo "Checking services..."
+          echo ""
+          echo "=== Services ==="
           kubectl get svc -n firecrawl
-          echo "Checking ingress..."
+          echo ""
+          echo "=== Ingress ==="
           kubectl get ingress -n firecrawl
+          echo ""
+
+          # If firecrawl-api is not ready, capture logs for debugging
+          API_READY=$(kubectl get pods -n firecrawl -l app=firecrawl,component=api -o jsonpath='{.items[0].status.containerStatuses[0].ready}' 2>/dev/null || echo "false")
+          if [ "$API_READY" != "true" ]; then
+            echo "=== Firecrawl API pod not ready — capturing logs ==="
+            kubectl logs -n firecrawl -l app=firecrawl,component=api --tail=50 --previous 2>/dev/null || true
+            echo ""
+            echo "=== Describe pod ==="
+            kubectl describe pod -n firecrawl -l app=firecrawl,component=api 2>/dev/null || true
+            echo "=== FAIL: firecrawl-api pod not ready ==="
+            exit 1
+          fi
+          echo "=== PASS: firecrawl-api pod ready ==="
