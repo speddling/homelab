@@ -1,5 +1,5 @@
 # LWA Infra -- Current State
-> Last updated: 2026-07-28
+> Last updated: 2026-08-04
 
 ---
 
@@ -92,6 +92,7 @@ All three APs will broadcast all three SSIDs (`LittleWolfAcres` on Users already
 | `navidrome.littlewolfacres.com` | 192.168.30.10 |
 | `argocd.littlewolfacres.com` | 192.168.30.10 |
 | `plane.littlewolfacres.com` | 192.168.30.10 |
+| `firecrawl.littlewolfacres.com` | 192.168.30.10 |
 | `zombatron.littlewolfacres.com` | 192.168.30.10 |
 | `studio.littlewolfacres.com` | 192.168.20.3 |
 | `apex.littlewolfacres.com` | 192.168.20.2 |
@@ -255,7 +256,7 @@ k3s single-node cluster host. Runs all household and client services.
 | Name | Status | Description |
 |---|---|---|
 | Synapse | ✅ Active | MCP/AI tooling namespace |
-| Obelisk | ✅ Active | Windows 11 VM on `/mnt/ssd-b` -- QEMU/KVM. RDP: `192.168.30.10:33389` |
+|| Obelisk | ⚠️ Deprecated (Windows 11 VM on `/mnt/ssd-b` -- QEMU/KVM. RDP: `192.168.30.10:33389`. Scheduled for decommission at end-of-month upgrades) |
 | Construct | ✅ Active | Debian 12 dev VM on NVMe `/vm/construct` -- QEMU/KVM. SSH: `construct` (Tailscale) or `monolith:2222` |
 
 ### Services
@@ -263,13 +264,14 @@ k3s single-node cluster host. Runs all household and client services.
 | Service | Role | Status |
 |---|---|---|
 | k3s | Kubernetes single-node cluster | ✅ Running |
+| Firecrawl | Web scraping API -- `firecrawl.littlewolfacres.com` | ✅ Running (via ArgoCD) |
 | Navidrome | Music streaming -- `navidrome.littlewolfacres.com` | ✅ Running |
 | Minecraft Bedrock | Family game server -- `zombatron.littlewolfacres.com:30132` | ✅ Running |
 | Samba | File shares (vault, studio-archive, music-library) | ✅ Running |
 | node_exporter | Host metrics | ✅ Running |
 | Synapse | MCP server | ✅ Running |
 | hdd-d mirror | Nightly rsync hdd-c -> hdd-d via systemd timer at 02:00 | ✅ Running |
-| Obelisk | QEMU/KVM Win11 VM -- RDP `192.168.30.10:33389` | ✅ Running |
+|| Obelisk | QEMU/KVM Win11 VM -- RDP `192.168.30.10:33389` | ⚠️ Deprecated (scheduled for decommission at end-of-month upgrades) |
 | Construct | QEMU/KVM Debian 12 dev VM -- SSH `monolith:2222` or Tailscale | ✅ Running |
 | Plane | Project management -- `plane.littlewolfacres.com` | ✅ Running (via ArgoCD) |
 
@@ -338,6 +340,7 @@ GitOps controller for k3s. Watches `speddling/lwa-infra` on `master` and reconci
 | App | Source Path | Namespace |
 |---|---|---|
 | navidrome | `services/navidrome/kubernetes/` | navidrome |
+| firecrawl | `services/firecrawl/kubernetes/` | firecrawl |
 | minecraft | `services/minecraft/kubernetes/` | minecraft |
 | synapse | `services/synapse/kubernetes/` | synapse |
 | plane | Helm chart, `helm.plane.so` | plane |
@@ -427,17 +430,36 @@ Automatic TLS via Cloudflare DNS-01. Issues and renews Let's Encrypt certificate
 
 ---
 
-## Apex
+## Apex (Workstation)
 
 | Detail | Value |
 |---|---|
 | Hostname | `apex` |
 | IP | 192.168.20.2 (Users VLAN, WiFi) |
 
+Apex has transitioned to a pure workstation role — no longer runs self-hosted services. Scribe MCP and Zombatron Importer have migrated to the **Construct VM** under `services/construct/ansible/roles/`.
+
+| Service | Port | Status |
+|---|---|---|
+| None | -- | Pure workstation (DAW, AI development) |
+
+---
+
+## Construct (VM on Monolith)
+
+| Detail | Value |
+|---|---|
+| Hostname | `construct` |
+| Type | Debian 12 VM, QEMU/KVM on Monolith (NVMe `/vm/construct`) |
+| SSH | `monolith:2222` (port-forward) or Tailscale |
+| Tailscale IP | 100.67.178.34 (Infra VLAN) |
+
 | Service | Port | Status |
 |---|---|---|
 | Scribe MCP | 8765 | ✅ Running |
 | Zombatron Importer | Socket Mode | ✅ Running |
+
+Scribe MCP and Zombatron Importer migrated here from Apex when Apex became a pure workstation.
 
 ---
 

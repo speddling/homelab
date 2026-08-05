@@ -1,0 +1,19 @@
+name: Deploy Firecrawl
+
+on:
+  push:
+    paths:
+      - "services/firecrawl/**"
+      - "kubernetes/apps/firecrawl.yaml"
+
+jobs:
+  trigger-sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger ArgoCD Sync
+        uses: actions/http-client@v1
+        with:
+          url: ${{ secrets.ARGOCD_WEBHOOK_URL }}
+          method: POST
+          headers: '{"Content-Type": "application/json"}'
+          body: '{"application": "firecrawl", "revision": "${{ github.sha }}"}'
