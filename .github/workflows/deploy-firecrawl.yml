@@ -17,7 +17,13 @@ jobs:
 
       - name: Apply Kubernetes manifests
         run: |
-          kubectl apply -f services/firecrawl/kubernetes/
+          kubectl apply -f services/firecrawl/kubernetes/namespace.yaml
+          kubectl apply -f services/firecrawl/kubernetes/configmap.yaml
+          kubectl apply -f services/firecrawl/kubernetes/secret.yaml
+          kubectl apply -f services/firecrawl/kubernetes/postgres-pvc.yaml
+          kubectl apply -f services/firecrawl/kubernetes/service.yaml
+          kubectl apply -f services/firecrawl/kubernetes/deployment.yaml
+          kubectl apply -f services/firecrawl/kubernetes/ingress.yaml
 
       - name: Verify deployment
         run: |

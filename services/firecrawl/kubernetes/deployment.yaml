@@ -39,7 +39,7 @@ spec:
               value: "production"
           volumeMounts:
             - name: scratch
-              emptyDir: {}
+              mountPath: /tmp
           resources:
             requests:
               memory: "2Gi"
