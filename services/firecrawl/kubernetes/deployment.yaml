@@ -24,7 +24,7 @@ spec:
           image: ghcr.io/firecrawl/firecrawl:latest
           imagePullPolicy: IfNotPresent
           command: ["node"]
-          args: ["--max-old-space-size=6144", "dist/src/harness.js", "--start-docker"]
+          args: ["--max-old-space-size=6144", "dist/src/harness.js", "--start-docker=false"]
           ports:
             - containerPort: 8080
           envFrom:
