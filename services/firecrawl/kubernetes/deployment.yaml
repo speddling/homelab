@@ -24,7 +24,11 @@ spec:
           image: ghcr.io/firecrawl/firecrawl:latest
           imagePullPolicy: IfNotPresent
           command: ["node"]
+<<<<<<< HEAD
           args: ["--max-old-space-size=6144", "dist/src/harness.js", "--start-docker"]
+=======
+          args: ["--max-old-space-size=6144", "dist/src/index.js"]
+>>>>>>> c450c243 (fix: bypass Firecrawl harness (node Go crash) by running API directly)
           ports:
             - containerPort: 8080
           envFrom:
@@ -193,12 +197,12 @@ spec:
               valueFrom:
                 configMapKeyRef:
                   name: firecrawl-config
-                  key: POSTGRES_USER
+                  key: RABBITMQ_USER
             - name: RABBITMQ_DEFAULT_PASS
               valueFrom:
                 secretKeyRef:
                   name: firecrawl-secret
-                  key: POSTGRES_PASSWORD
+                  key: RABBITMQ_PASSWORD
           ports:
             - containerPort: 5672
             - containerPort: 15672
