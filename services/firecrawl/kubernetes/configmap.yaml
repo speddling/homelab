@@ -21,11 +21,11 @@ data:
   # Service URLs (internal K8s service names)
   REDIS_URL: "redis://firecrawl-redis:6379"
   REDIS_RATE_LIMIT_URL: "redis://firecrawl-redis:6379"
-  NUQ_DATABASE_URL: "postgresql://firecrawl:changeme@firecrawl-postgres:5432/firecrawl"
   NUQ_RABBITMQ_URL: "amqp://firecrawl-rabbitmq:5672"
-  PLAYWRIGHT_MICROSERVICE_URL: "http://firecrawl-api:8080/scrape"
+  PLAYWRIGHT_MICROSERVICE_URL: "http://firecrawl-api:8080"
 
-  # Database configuration
+  # Database configuration — DATABASE_URL and NUQ_DATABASE_URL
+  # are set via the firecrawl-secret (require PostgreSQL password)
   POSTGRES_USER: "firecrawl"
   POSTGRES_DB: "firecrawl"
   POSTGRES_HOST: "firecrawl-postgres"
@@ -39,9 +39,6 @@ data:
 
   # Logging
   LOGGING_LEVEL: "INFO"
-
-  # Webhook (set via secret when configured)
-  SELF_HOSTED_WEBHOOK_URL: ""
 
   # Health/liveness settings
   HARNESS_STARTUP_TIMEOUT_MS: "60000"
