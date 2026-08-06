@@ -24,7 +24,7 @@ spec:
           image: ghcr.io/firecrawl/firecrawl:latest
           imagePullPolicy: IfNotPresent
           command: ["node"]
-          args: ["--max-old-space-size=6144", "dist/src/index.js"]
+          args: ["--max-old-space-size=6144", "dist/src/harness.js", "--start-docker=false"]
           ports:
             - containerPort: 8080
           envFrom:
@@ -193,12 +193,12 @@ spec:
               valueFrom:
                 configMapKeyRef:
                   name: firecrawl-config
-                  key: RABBITMQ_USER
+                  key: POSTGRES_USER
             - name: RABBITMQ_DEFAULT_PASS
               valueFrom:
                 secretKeyRef:
                   name: firecrawl-secret
-                  key: RABBITMQ_PASSWORD
+                  key: POSTGRES_PASSWORD
           ports:
             - containerPort: 5672
             - containerPort: 15672
