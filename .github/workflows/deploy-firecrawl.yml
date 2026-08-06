@@ -30,14 +30,9 @@ jobs:
           # Apply the ArgoCD Application to the cluster so it appears in the
           # ArgoCD UI. The App of Apps root watches kubernetes/apps/ and
           # auto-syncs, but this explicit apply ensures the child Application
-          # is created immediately without waiting for the next 3-minute sync
-          # cycle or repo-server cache refresh.
+          # is created immediately without waiting for the next 3-minute
+          # sync cycle or repo-server cache refresh.
           kubectl apply -f kubernetes/apps/firecrawl.yaml -n argocd
-          # Restart the argocd-repo-server to clear any stale cached manifests
-          # (known issue: repo-server needs a rollout restart to pick up
-          #  cache-expiration changes — see argocd-cmd-params-cm.yaml)
-          kubectl rollout restart deployment/argocd-repo-server -n argocd
-          kubectl rollout status deployment/argocd-repo-server -n argocd --timeout=60s
 
       - name: Wait for pods to stabilize
         run: |
