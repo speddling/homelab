@@ -14,7 +14,6 @@ jobs:
     runs-on: [self-hosted, monolith]
     steps:
       - uses: actions/checkout@v4
-
       - name: Apply Kubernetes manifests
         run: |
           kubectl apply -f services/firecrawl/kubernetes/namespace.yaml
@@ -24,25 +23,37 @@ jobs:
           kubectl apply -f services/firecrawl/kubernetes/service.yaml
           kubectl apply -f services/firecrawl/kubernetes/deployment.yaml
           kubectl apply -f services/firecrawl/kubernetes/ingress.yaml
-
+      - name: Apply ArgoCD Application
+        run: |
+          # Apply the ArgoCD Application to the cluster so it appears in the ArgoCD UI.
+          # The App of Apps root watches kubernetes/apps/ and auto-syncs, but this
+          # explicit apply ensures the child Application is created immediately without
+          # waiting for the next 3-minute sync cycle or repo-server cache refresh.
+          kubectl apply -f kubernetes/apps/firecrawl.yaml -n argocd
       - name: Wait for pods to stabilize
         run: |
           echo "Waiting for pods to stabilize..."
           sleep 30
-
       - name: Verify deployment
         run: |
           echo "=== Namespace ==="
           kubectl get namespace firecrawl
           echo ""
+
           echo "=== Pods ==="
           kubectl get pods -n firecrawl
           echo ""
+
           echo "=== Services ==="
           kubectl get svc -n firecrawl
           echo ""
+
           echo "=== Ingress ==="
           kubectl get ingress -n firecrawl
+          echo ""
+
+          echo "=== ArgoCD Application ==="
+          kubectl get application firecrawl -n argocd -o wide 2>/dev/null || echo "(ArgoCD Application not found — may not be synced yet)"
           echo ""
 
           # If firecrawl-api is not ready, capture logs for debugging
