@@ -32,6 +32,9 @@ data:
   POSTGRES_PORT: "5432"
   USE_DB_AUTHENTICATION: "false"
 
+  # RabbitMQ configuration
+  RABBITMQ_USER: "firecrawl"
+
   # App scheme (Traefik-managed, so http:// on internal cluster)
   FIRECRAWL_APP_SCHEME: "http"
   FIRECRAWL_APP_HOST: "firecrawl-api"
