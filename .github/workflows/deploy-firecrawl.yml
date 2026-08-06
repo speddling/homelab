@@ -14,6 +14,7 @@ jobs:
     runs-on: [self-hosted, monolith]
     steps:
       - uses: actions/checkout@v4
+
       - name: Apply Kubernetes manifests
         run: |
           kubectl apply -f services/firecrawl/kubernetes/namespace.yaml
@@ -23,17 +24,26 @@ jobs:
           kubectl apply -f services/firecrawl/kubernetes/service.yaml
           kubectl apply -f services/firecrawl/kubernetes/deployment.yaml
           kubectl apply -f services/firecrawl/kubernetes/ingress.yaml
+
       - name: Apply ArgoCD Application
         run: |
-          # Apply the ArgoCD Application to the cluster so it appears in the ArgoCD UI.
-          # The App of Apps root watches kubernetes/apps/ and auto-syncs, but this
-          # explicit apply ensures the child Application is created immediately without
-          # waiting for the next 3-minute sync cycle or repo-server cache refresh.
+          # Apply the ArgoCD Application to the cluster so it appears in the
+          # ArgoCD UI. The App of Apps root watches kubernetes/apps/ and
+          # auto-syncs, but this explicit apply ensures the child Application
+          # is created immediately without waiting for the next 3-minute sync
+          # cycle or repo-server cache refresh.
           kubectl apply -f kubernetes/apps/firecrawl.yaml -n argocd
+          # Restart the argocd-repo-server to clear any stale cached manifests
+          # (known issue: repo-server needs a rollout restart to pick up
+          #  cache-expiration changes — see argocd-cmd-params-cm.yaml)
+          kubectl rollout restart deployment/argocd-repo-server -n argocd
+          kubectl rollout status deployment/argocd-repo-server -n argocd --timeout=60s
+
       - name: Wait for pods to stabilize
         run: |
           echo "Waiting for pods to stabilize..."
           sleep 30
+
       - name: Verify deployment
         run: |
           echo "=== Namespace ==="
