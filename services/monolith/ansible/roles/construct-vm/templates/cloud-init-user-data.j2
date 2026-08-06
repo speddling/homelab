@@ -87,12 +87,13 @@ write_files:
       sudo apt-get update -qq
       sudo apt-get install -y tailscale
 
-      # Authenticate
-      # --accept-dns=false: Tailscale tailnet has no upstream DNS resolvers
-      # configured in the admin console, so its stub resolver (100.100.100.100)
-      # cannot resolve public domains. We manage /etc/resolv.conf ourselves.
+      # --accept-routes is intentionally OMITTED: the construct VM also runs k3s,
+      # which uses 10.42.0.0/16 (pods) and 10.43.0.0/16 (services) for its internal
+      # network. Accepting route announcements from other Tailscale nodes can
+      # install conflicting routes, making k3s ClusterIPs (e.g. ArgoCD repo-server
+      # at 10.43.x.x) unreachable. Root cause of the 18-day ArgoCD outage.
       sudo tailscale up --authkey={{ tailscale_auth_key }} \
-        --accept-routes --accept-dns=false
+        --accept-dns=false
 
   - path: /tmp/setup-dns.sh
     permissions: '0755'
