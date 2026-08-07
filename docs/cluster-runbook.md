@@ -336,6 +336,38 @@ below.
 
 ---
 
+## Firecrawl
+
+### Access
+
+| Aspect | Detail |
+|---|---|
+| Hostname | https://firecrawl.littlewolfacres.com |
+| Namespace | firecrawl |
+| Port | 8080 (ClusterIP) |
+| Health | /v0/health/liveness |
+
+### Health Check
+
+```bash
+kubectl get pods -n firecrawl
+kubectl logs -n firecrawl deployment/firecrawl-api-postgres --tail=50
+kubectl get pods -n firecrawl -o wide
+```
+
+### Restart
+
+```bash
+kubectl rollout restart deployment/firecrawl-api-postgres -n firecrawl
+kubectl rollout status deployment/firecrawl-api-postgres -n firecrawl
+```
+
+### Adding to the Cluster Runbook
+
+This section was missing — Firecrawl was added to homelab-state.md (DNS rewrites
+table) but not to the AdGuard Home rewrite list in the Ansible template, nor was
+it documented in this runbook. Both gaps are fixed in this PR.
+
 ## Service Health Checks
 
 ### Watchtower
